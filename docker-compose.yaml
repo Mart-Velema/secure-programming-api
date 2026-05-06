@@ -1,0 +1,13 @@
+services:
+  server:
+    image: golang:1.26.2-trixie
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    container_name: secureprogramming
+    restart: unless-stopped
+    volumes:
+      - ./docker/data:/data
+    ports:
+      - "${PORT}:${PORT}"
+    env_file: .env
