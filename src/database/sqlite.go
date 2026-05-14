@@ -18,12 +18,12 @@ var (
 
 type User struct {
 	gorm.Model  `json:"-"`
-	Name        string `json:"name"`
+	Name        string `json:"name" gorm:"unique"`
 	Email       string `json:"email" encrypt:"true"`
-	EmailHash   string `hash:"Email"`
+	EmailHash   string `hash:"Email" gorm:"unique"`
 	Password    string `json:"password" hash:"Password"`
 	PhoneNumber string `json:"phone_number" encrypt:"true"`
-	NumberHash  string `hash:"PhoneNumber"`
+	NumberHash  string `hash:"PhoneNumber" gorm:"unique"`
 	Balance     int64
 	Trades      []Trade `gorm:"foreignKey:UserID"`
 }
