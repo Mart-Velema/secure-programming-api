@@ -14,7 +14,27 @@ type User struct {
 	gorm.Model  `json:"-"`
 	Name        string `json:"name"`
 	Email       string `json:"email" encrypt:"true"`
+	EmailHash   string `hash:"Email"`
+	Password    string `json:"password" hash:"Password"`
 	PhoneNumber string `json:"phone_number" encrypt:"true"`
+	NumberHash  string `hash:"PhoneNumber"`
+	Balance     int64
+	Trades      []Trade `gorm:"foreignKey:UserID"`
+}
+
+type Trade struct {
+	gorm.Model  `json:"-"`
+	UserID      uint
+	Cost        int64
+	SoldItems   []TradeItem `gorm:"foreignKey:TradeID"`
+	BoughtItems []TradeItem `gorm:"foreignKey:TradeID"`
+}
+
+type TradeItem struct {
+	gorm.Model `json:"-"`
+	TradeID    uint
+	ItemID     uint
+	Quantity   uint
 }
 
 func deriveKey(passcode string) []byte {
@@ -54,7 +74,7 @@ func CreateDB() *gorm.DB {
 		log.Fatal(err)
 	}
 
-	err = db.AutoMigrate(&User{})
+	err = db.AutoMigrate(&User{}, &Trade{}, &TradeItem{})
 	if err != nil {
 		log.Fatal(err)
 	}
