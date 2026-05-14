@@ -77,7 +77,7 @@ func createDB() {
 	if instance != nil {
 		return
 	}
-	db, err := gorm.Open(sqlite.Open("guineatrade.db"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(os.Getenv("SQLITE_FILE_LOCATION")), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
