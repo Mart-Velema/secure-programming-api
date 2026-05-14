@@ -24,15 +24,8 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v6
-      - name: installing go packages
-        uses: actions/setup-go@v6
-        with:
-          go-version: '1.26.2'
       - name: run static code analysis
         uses: dominikh/staticcheck-action@v1.4.1
-        with:
-          install-go: false
-          use-cache: false
 
   test:
     runs-on: ubuntu-latest
