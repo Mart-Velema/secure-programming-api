@@ -21,7 +21,7 @@ func main() {
 	}
 	fmt.Printf("Running locally on localhost:%s\n", os.Getenv("PORT"))
 
-	_ = database.CreateDB()
+	_ = database.GetInstance()
 
 	router := gin.Default()
 

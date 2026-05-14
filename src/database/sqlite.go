@@ -3,11 +3,17 @@ package database
 import (
 	"log"
 	"os"
+	"sync"
 
 	"github.com/cgholdings/go-common/database/encryption"
 	"golang.org/x/crypto/argon2"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+)
+
+var (
+	lock     = &sync.Mutex{}
+	instance *gorm.DB
 )
 
 type User struct {
@@ -52,12 +58,7 @@ func deriveKey(passcode string) []byte {
 	)
 }
 
-func CreateDB() *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("guineatrade.db"), &gorm.Config{})
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func setupEncryptor() *encryption.Encryptor {
 	config := encryption.DefaultConfig()
 
 	if key, exists := os.LookupEnv("ENCRYPTION_PASSCODE"); exists {
@@ -69,6 +70,19 @@ func CreateDB() *gorm.DB {
 		log.Fatal(err)
 	}
 
+	return encryptor
+}
+
+func createDB() {
+	if instance != nil {
+		return
+	}
+	db, err := gorm.Open(sqlite.Open("guineatrade.db"), &gorm.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	encryptor := setupEncryptor()
 	err = db.Use(encryption.NewPlugin(encryptor))
 	if err != nil {
 		log.Fatal(err)
@@ -79,5 +93,16 @@ func CreateDB() *gorm.DB {
 		log.Fatal(err)
 	}
 
-	return db
+	instance = db
+}
+
+func GetInstance() *gorm.DB {
+	if instance != nil {
+		return instance
+	}
+	lock.Lock()
+	defer lock.Unlock()
+	createDB()
+
+	return instance
 }
