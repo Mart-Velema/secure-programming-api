@@ -33,6 +33,7 @@ jobs:
         uses: dominikh/staticcheck-action@v1.4.1
         with:
           install-go: false
+          use-cache: false
 
   test:
     runs-on: ubuntu-latest
