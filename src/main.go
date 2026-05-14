@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"guineatrade.nhlstenden.com/src/database"
 )
 
 func HelloWorld(c *gin.Context) {
@@ -19,6 +20,8 @@ func main() {
 		log.Fatalf("Error loading .env file: %s\n", err)
 	}
 	fmt.Printf("Running locally on localhost:%s", os.Getenv("PORT"))
+
+	_ = database.CreateDB()
 
 	router := gin.Default()
 
