@@ -2,6 +2,9 @@ name: Unit-Testing
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feat/ci-cd
   pull_request:
 
     branches:
