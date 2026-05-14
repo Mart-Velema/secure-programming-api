@@ -1,4 +1,5 @@
-name: publish.yml
+name: Publish
+
 on:
   push:
     branches:
@@ -12,7 +13,7 @@ on:
       - 'v*'
 
 jobs:
-  test:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - name: checkout code
@@ -21,6 +22,8 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: '1.26.2'
+      - name: Run go tests
+        run: go test ./...
       - name: Build package
         run: |
           GIN_MODE=release go build -C ./src -ldflags="-X main.Version=${{ github.ref_name }}" -v -o ~/gt
@@ -31,7 +34,7 @@ jobs:
           name: linux-x64-gt-latest
           path: ~/gt
           if-no-files-found: error
-          retention-days: 120
+          retention-days: 30
           archive: false
           overwrite: true
       - name: Publish static package
@@ -40,6 +43,6 @@ jobs:
           name: linux-x64-gt-fat-latest
           path: ~/gt-fat
           if-no-files-found: error
-          retention-days: 120
+          retention-days: 30
           archive: false
           overwrite: true
