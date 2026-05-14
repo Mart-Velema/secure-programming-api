@@ -26,13 +26,13 @@ jobs:
         run: go test ./...
       - name: Build package
         run: |
-          GIN_MODE=release go build -C ./src -ldflags="-X main.Version=${{ github.ref_name }}" -v -o ~/gt
-          GIN_MODE=release CGO_ENABLED=1 go build -C ./src -ldflags="-X main.Version=${{ github.ref_name }}" -v -o ~/gt-fat
+          GIN_MODE=release go build -C ./src -ldflags="-X main.Version=${{ github.ref_name }}" -v -o ~/gt-${{ github.ref_name }}
+          GIN_MODE=release CGO_ENABLED=1 go build -C ./src -ldflags="-X main.Version=${{ github.ref_name }}" -v -o ~/gt-fat-${{ github.ref_name }}
       - name: Publish standard package
         uses: actions/upload-artifact@v7
         with:
           name: linux-x64-gt-latest
-          path: ~/gt
+          path: ~/gt-${{ github.ref_name }}
           if-no-files-found: error
           retention-days: 30
           archive: false
@@ -41,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: linux-x64-gt-fat-latest
-          path: ~/gt-fat
+          path: ~/gt-fat-${{ github.ref_name }}
           if-no-files-found: error
           retention-days: 30
           archive: false
