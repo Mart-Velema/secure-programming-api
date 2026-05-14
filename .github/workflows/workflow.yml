@@ -6,7 +6,6 @@ on:
     branches:
       - feat/ci-cd
   pull_request:
-
     branches:
       - dev
       - main
@@ -40,25 +39,25 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v6
-      - name: Cache Go modules
-        id: cache-go
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-go-deps
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ env.cache-name }}
-            ${{ runner.os }}-go-
-            ${{ runner.os }}-
-
-      - if: ${{ steps.cache-go.outputs.cache-hit != 'true' }}
-        name: List the state of the package cache
-        continue-on-error: true
-        run: echo "Found cache!"
+#      - name: Cache Go modules
+#        id: cache-go
+#        uses: actions/cache@v5
+#        env:
+#          cache-name: cache-go-deps
+#        with:
+#          path: |
+#            ~/.cache/go-build
+#            ~/go/pkg/mod
+#          key: ${{ runner.os }}-go-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-${{ env.cache-name }}
+#            ${{ runner.os }}-go-
+#            ${{ runner.os }}-
+#
+#      - if: ${{ steps.cache-go.outputs.cache-hit == 'true' }}
+#        name: List the state of the package cache
+#        continue-on-error: true
+#        run: echo "Found cache!"
       - name: installing go packages
         uses: actions/setup-go@v6
         with:
