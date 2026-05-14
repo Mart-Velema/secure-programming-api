@@ -19,7 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading .env file: %s\n", err)
 	}
-	fmt.Printf("Running locally on localhost:%s", os.Getenv("PORT"))
+	fmt.Printf("Running locally on localhost:%s\n", os.Getenv("PORT"))
 
 	_ = database.CreateDB()
 
