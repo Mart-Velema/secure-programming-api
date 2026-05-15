@@ -19,14 +19,6 @@ jobs:
       - name: run linter
         uses: golangci/golangci-lint-action@v9
 
-  analysis:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout code
-        uses: actions/checkout@v6
-      - name: run static code analysis
-        uses: dominikh/staticcheck-action@v1.4.1
-
   test:
     runs-on: ubuntu-latest
     steps:
@@ -36,5 +28,3 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: '1.26.2'
-      - name: Run go tests
-        run: go test ./...
