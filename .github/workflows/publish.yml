@@ -31,9 +31,9 @@ jobs:
         run: go test ./...
       - name: Build package
         run: |
-          go build -C ~/src -ldflags="-X main.Version=${{ github.ref_name }}" \
+          go build -C ./src -ldflags="-X main.Version=${{ github.ref_name }}" \
             -v -o ~/gt
-          CGO_ENABLED=0 GOOS=linux go build -C ~/src \
+          CGO_ENABLED=0 GOOS=linux go build -C ./src \
             -ldflags="-extldflags=-static -X main.Version=${{ github.ref_name }}" \
             -tags netgo \
             -v -o ~/gt-static
