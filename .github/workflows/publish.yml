@@ -3,7 +3,7 @@ name: Publish
 on:
   push:
     branches:
-      - feat/ci-cd
+      - feat/ci-cd # Should always fire on this branch for testing
   release:
     types:
       - published
@@ -17,6 +17,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     steps:
       - name: checkout code
         uses: actions/checkout@v6
