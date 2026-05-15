@@ -60,4 +60,4 @@ jobs:
             ~/gt
             ~/gt-static
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
