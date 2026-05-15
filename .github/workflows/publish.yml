@@ -9,6 +9,7 @@ on:
       - published
       - released
       - prereleased
+      - edited
   create:
     tags:
       - 'v*'
