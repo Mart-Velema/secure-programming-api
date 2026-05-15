@@ -58,3 +58,5 @@ jobs:
           files: |
             ~/gt
             ~/gt-static
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
