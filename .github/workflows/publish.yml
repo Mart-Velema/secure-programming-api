@@ -59,8 +59,8 @@ jobs:
           overwrite: true
       - name: Generate hashes
         run: |
-          sha256sum /gt > checksum.txt
-          sha256sum /gt-static > checksum.txt
+          sha256sum /gt >> /checksum.txt
+          sha256sum /gt-static >> /checksum.txt
       - name: Release
         uses: softprops/action-gh-release@v3
         if: github.ref_type == 'tag'
@@ -68,5 +68,6 @@ jobs:
           files: |
             /gt
             /gt-static
+            /checksum.txt
         env:
           GITHUB_TOKEN: ${{ github.token }}
