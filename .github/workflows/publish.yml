@@ -26,8 +26,12 @@ jobs:
         run: go test ./...
       - name: Build package
         run: |
-          GIN_MODE=release go build -C ./src -ldflags="-X main.Version=${{ github.ref_name }}" -v -o ~/gt
-          GIN_MODE=release CGO_ENABLED=1 go build -C ./src -ldflags="-X main.Version=${{ github.ref_name }}" -v -o ~/gt-fat
+          go build -C ./src -ldflags="-X main.Version=${{ github.ref_name }}" \
+            -v -o ~/gt
+          CGO_ENABLED=0 GOOS=linux go build -C ./src \
+            -ldflags="-extldflags=-static -X main.Version=${{ github.ref_name }}" \
+            -tags netgo \
+            -v -o ~/gt-static
       - name: Publish standard package
         uses: actions/upload-artifact@v7
         with:
@@ -40,8 +44,8 @@ jobs:
       - name: Publish static package
         uses: actions/upload-artifact@v7
         with:
-          name: linux-x64-gt-fat-latest
-          path: ~/gt-fat
+          name: linux-x64-gt-static-latest
+          path: ~/gt-static
           if-no-files-found: error
           retention-days: 30
           archive: false
@@ -52,4 +56,4 @@ jobs:
         with:
           files: |
             ~/gt
-            ~/gt
+            ~/gt-static
