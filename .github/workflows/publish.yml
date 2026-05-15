@@ -28,7 +28,7 @@ jobs:
         with:
           go-version: '1.26.2'
       - name: Run go tests
-        run: go test ~/...
+        run: go test ./...
       - name: Build package
         run: |
           go build -C ~/src -ldflags="-X main.Version=${{ github.ref_name }}" \
