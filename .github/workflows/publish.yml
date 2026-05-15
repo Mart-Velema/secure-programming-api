@@ -52,10 +52,6 @@ jobs:
           retention-days: 30
           archive: false
           overwrite: true
-      - name: Check token permissions
-        run: |
-          curl -s -H "Authorization: token ${{ github.token }}" \
-            https://api.github.com/repos/${{ github.repository }}/releases | jq '.[] | .upload_url'
       - name: Release
         uses: softprops/action-gh-release@v3
         if: github.ref_type == 'tag'
@@ -63,4 +59,5 @@ jobs:
           files: |
             ~/gt
             ~/gt-static
-          token: '${{ github.token }}'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GT_PAT }}
