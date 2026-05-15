@@ -14,6 +14,8 @@ func HelloWorld(c *gin.Context) {
 	c.String(200, "%s", "Hello, world!")
 }
 
+var Version string
+
 func init() {
 	err := godotenv.Load()
 	if err != nil {
