@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/cgholdings/go-common/database/encryption"
 	"github.com/gin-gonic/gin"
@@ -85,9 +86,43 @@ func Login(c *gin.Context) {
 		SendError(c, http.StatusInternalServerError, err)
 		return
 	}
+
 	c.JSON(http.StatusOK, Tokens{
 		JWT:     JWT,
 		Refresh: refreshToken,
+	})
+}
+
+func Refresh(c *gin.Context) {
+	var refreshToken Tokens
+	if err := c.BindJSON(&refreshToken); err != nil {
+		SendError(c, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	var token database.RefreshToken
+	if result := database.GetInstance().
+		Joins("User").
+		Where("refresh_tokens.token_hash = ?", encryption.Hash(refreshToken.Refresh)).
+		First(&token); result.Error != nil {
+		SendError(c, http.StatusNotFound, result.Error)
+		return
+	}
+
+	if time.Now().After(token.ExpiresOn) {
+		database.GetInstance().Delete(&token)
+		SendError(c, http.StatusUnauthorized, errors.New("login expired"))
+		return
+	}
+
+	jwt, err := GenerateToken(&token.User)
+	if err != nil {
+		SendError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, &Tokens{
+		JWT: jwt,
 	})
 }
 

@@ -85,7 +85,6 @@ func GenerateRefreshToken(user *database.User) (string, error) {
 		UserID:    user.ID,
 		Token:     newToken,
 		ExpiresOn: time.Now().Add(time.Hour * time.Duration(24*refreshLifeSpan)),
-		Revoked:   false,
 	})
 
 	return newToken, nil

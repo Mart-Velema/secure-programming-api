@@ -46,10 +46,11 @@ func (u User) MarshalJSON() ([]byte, error) {
 }
 
 type RefreshToken struct {
-	UserID    uint
-	Token     string `gorm:"uniqueIndex"`
+	UserID    uint   `gorm:"index"`
+	User      User   `gorm:"foreignKey:UserID"`
+	Token     string `encrypt:"true"`
+	TokenHash string `hash:"Token" gorm:"uniqueIndex"`
 	ExpiresOn time.Time
-	Revoked   bool
 }
 
 type Trade struct {

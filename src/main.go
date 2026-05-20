@@ -42,6 +42,7 @@ func main() {
 	{
 		apiPublic.POST("/register", auth.Register)
 		apiPublic.POST("/login", auth.Login)
+		apiPublic.POST("/refresh", auth.Refresh)
 	}
 
 	apiRestricted := router.Group("/api/v1")
