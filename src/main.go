@@ -38,12 +38,17 @@ func main() {
 
 	router := gin.Default()
 
-	api := router.Group("/api/v1")
+	apiPublic := router.Group("/api/v1/auth")
 	{
-		authGroup := api.Group("/auth")
+		apiPublic.POST("/register", auth.Register)
+		apiPublic.POST("/login", auth.Login)
+	}
+
+	apiRestricted := router.Group("/api/v1")
+	apiRestricted.Use(auth.JwtAuthMiddleware())
+	{
+		authGroup := apiRestricted.Group("/auth")
 		{
-			authGroup.POST("/register", auth.Register)
-			authGroup.POST("/login", auth.Login)
 			authGroup.POST("/logout", auth.Logout)
 			authGroup.GET("/me", auth.Me)
 

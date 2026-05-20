@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -12,6 +13,18 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"guineatrade.nhlstenden.com/src/database"
 )
+
+func JwtAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		err := IsTokenValid(c)
+		if err != nil {
+			c.String(http.StatusUnauthorized, "Unauthorized")
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
 
 func GenerateToken(user *database.User) (string, error) {
 	tokenLifespan, lifespanExists := os.LookupEnv("JWT_TIMEOUT_HOURS")
@@ -34,18 +47,29 @@ func GenerateToken(user *database.User) (string, error) {
 	return token.SignedString([]byte(jwtSecret))
 }
 
+func IsTokenValid(c *gin.Context) error {
+	tokenString, err := ExtractToken(c)
+	if err != nil {
+		return err
+	}
+
+	_, err = jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+		return []byte(os.Getenv("JWT_SECRET_KEY")), nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func ExtractToken(c *gin.Context) (string, error) {
-	token := c.Query("token")
-	if token != "" {
-		return token, nil
-	}
-
 	bearerToken := c.Request.Header.Get("Authorization")
-	if len(strings.Split(bearerToken, " ")) == 2 {
-		return strings.Split(bearerToken, " ")[1], nil
+	if len(strings.Split(bearerToken, " ")) != 2 {
+		return "", errors.New("can't find token in HTTP headers")
 	}
 
-	return "", errors.New("can't find token in HTTP headers")
+	return strings.Split(bearerToken, " ")[1], nil
 }
 
 func ExtractTokenUser(c *gin.Context) (database.User, error) {
