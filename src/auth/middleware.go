@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -94,7 +93,7 @@ func GenerateRefreshToken(user *database.User, c *gin.Context) (string, error) {
 }
 
 func GenerateTokenNonce(c *gin.Context) string {
-	return encryption.Hash(fmt.Sprintf("%s--%s", c.RemoteIP(), c.Request.Header.Get("User-Agent")))
+	return encryption.Hash(c.RemoteIP() + c.Request.Header.Get("User-Agent"))
 }
 
 func IsTokenValid(c *gin.Context) error {
