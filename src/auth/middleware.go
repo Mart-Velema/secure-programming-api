@@ -18,6 +18,7 @@ import (
 )
 
 var tokenLifeSpan int
+var refreshLifeSpan int
 var jwtSecret []byte
 
 func init() {
@@ -27,12 +28,18 @@ func init() {
 	}
 	tokenLifeSpanString, lifespanExists := os.LookupEnv("JWT_TIMEOUT_MINUTES")
 	jwtSecretString, secretsExists := os.LookupEnv("JWT_SECRET_KEY")
+	refreshLifeSpanString, lifespanRefreshExists := os.LookupEnv("JWT_REFRESH_DAYS")
 
-	if !secretsExists || !lifespanExists {
-		log.Fatal("JWT_TIMEOUT_MINUTES and/or JWT_SECRET_KEY unset")
+	if !secretsExists || !lifespanExists || !lifespanRefreshExists {
+		log.Fatal("JWT_TIMEOUT_MINUTES, JWT_SECRET_KEY and/or JWT_REFRESH_DAYS unset")
 	}
 
 	tokenLifeSpan, err = strconv.Atoi(tokenLifeSpanString)
+	if err != nil {
+		log.Fatal("JWT_TIMEOUT_MINUTES is not a valid integer")
+	}
+
+	refreshLifeSpan, err = strconv.Atoi(refreshLifeSpanString)
 	if err != nil {
 		log.Fatal("JWT_TIMEOUT_MINUTES is not a valid integer")
 	}
@@ -63,7 +70,7 @@ func GenerateToken(user *database.User) (string, error) {
 	claims["exp"] = time.Now().Add(time.Hour * time.Duration(tokenLifeSpan)).Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 
-	return token.SignedString([]byte(jwtSecret))
+	return token.SignedString(jwtSecret)
 }
 
 func GenerateRefreshToken(user *database.User) (string, error) {
@@ -77,7 +84,7 @@ func GenerateRefreshToken(user *database.User) (string, error) {
 	database.GetInstance().Create(&database.RefreshToken{
 		UserID:    user.ID,
 		Token:     newToken,
-		ExpiresOn: time.Now().Add(time.Hour * 24 * 7),
+		ExpiresOn: time.Now().Add(time.Hour * time.Duration(24*refreshLifeSpan)),
 		Revoked:   false,
 	})
 
