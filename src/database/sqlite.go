@@ -1,9 +1,11 @@
 package database
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/cgholdings/go-common/database/encryption"
 	"golang.org/x/crypto/argon2"
@@ -18,14 +20,38 @@ var (
 
 type User struct {
 	gorm.Model  `json:"-"`
-	Name        string `json:"name" gorm:"unique"`
-	Email       string `json:"email" encrypt:"true"`
-	EmailHash   string `hash:"Email" gorm:"unique"`
-	Password    string `json:"password" hash:"Password"`
-	PhoneNumber string `json:"phone_number" encrypt:"true"`
-	NumberHash  string `hash:"PhoneNumber" gorm:"unique"`
-	Balance     int64
-	Trades      []Trade `gorm:"foreignKey:UserID"`
+	Name        string         `json:"name" gorm:"unique"`
+	Email       string         `json:"email" encrypt:"true"`
+	EmailHash   string         `json:"-" hash:"Email" gorm:"unique"`
+	Password    string         `json:"password" hash:"Password"`
+	PhoneNumber string         `json:"tel" encrypt:"true"`
+	NumberHash  string         `json:"-" hash:"PhoneNumber" gorm:"unique"`
+	Balance     int64          `json:"-" gorm:"default:0"`
+	Trades      []Trade        `gorm:"foreignKey:UserID"`
+	Token       []RefreshToken `gorm:"foreignKey:UserID"`
+}
+
+func (u User) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Name        string `json:"name"`
+		Email       string `json:"email"`
+		PhoneNumber string `json:"tel"`
+		Balance     int64  `json:"balance"`
+	}{
+		Name:        u.Name,
+		Email:       u.Email,
+		PhoneNumber: u.PhoneNumber,
+		Balance:     u.Balance,
+	})
+}
+
+type RefreshToken struct {
+	UserID    uint   `gorm:"index"`
+	User      User   `gorm:"foreignKey:UserID"`
+	Token     string `encrypt:"true"`
+	TokenHash string `hash:"Token" gorm:"uniqueIndex"`
+	Nonce     string
+	ExpiresOn time.Time
 }
 
 type Trade struct {
@@ -58,7 +84,7 @@ func deriveKey(passcode string) []byte {
 	)
 }
 
-func setupEncryptor() *encryption.Encryptor {
+func GetEncryptor() *encryption.Encryptor {
 	config := encryption.DefaultConfig()
 
 	if key, exists := os.LookupEnv("ENCRYPTION_PASSCODE"); exists {
@@ -82,13 +108,13 @@ func createDB() {
 		log.Fatal(err)
 	}
 
-	encryptor := setupEncryptor()
+	encryptor := GetEncryptor()
 	err = db.Use(encryption.NewPlugin(encryptor))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = db.AutoMigrate(&User{}, &Trade{}, &TradeItem{})
+	err = db.AutoMigrate(&User{}, &Trade{}, &TradeItem{}, &RefreshToken{})
 	if err != nil {
 		log.Fatal(err)
 	}
