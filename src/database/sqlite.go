@@ -1,6 +1,7 @@
 package database
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 	"sync"
@@ -20,12 +21,26 @@ type User struct {
 	gorm.Model  `json:"-"`
 	Name        string  `json:"name" gorm:"unique"`
 	Email       string  `json:"email" encrypt:"true"`
-	EmailHash   string  `hash:"Email" gorm:"unique" json:"-"`
-	Password    string  `json:"password" hash:"Password" json:"-"`
+	EmailHash   string  `json:"-" hash:"Email" gorm:"unique"`
+	Password    string  `json:"password" hash:"Password"`
 	PhoneNumber string  `json:"tel" encrypt:"true"`
-	NumberHash  string  `hash:"PhoneNumber" gorm:"unique" json:"-"`
-	Balance     int64   `gorm:"default:0"`
+	NumberHash  string  `json:"-" hash:"PhoneNumber" gorm:"unique"`
+	Balance     int64   `json:"-" gorm:"default:0"`
 	Trades      []Trade `gorm:"foreignKey:UserID"`
+}
+
+func (u User) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Name        string `json:"name"`
+		Email       string `json:"email"`
+		PhoneNumber string `json:"tel"`
+		Balance     int64  `json:"balance"`
+	}{
+		Name:        u.Name,
+		Email:       u.Email,
+		PhoneNumber: u.PhoneNumber,
+		Balance:     u.Balance,
+	})
 }
 
 type Trade struct {
