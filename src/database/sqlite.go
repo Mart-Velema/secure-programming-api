@@ -50,6 +50,7 @@ type RefreshToken struct {
 	User      User   `gorm:"foreignKey:UserID"`
 	Token     string `encrypt:"true"`
 	TokenHash string `hash:"Token" gorm:"uniqueIndex"`
+	Nonce     string
 	ExpiresOn time.Time
 }
 

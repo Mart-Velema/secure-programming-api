@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cgholdings/go-common/database/encryption"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
@@ -73,7 +75,7 @@ func GenerateToken(user *database.User) (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
-func GenerateRefreshToken(user *database.User) (string, error) {
+func GenerateRefreshToken(user *database.User, c *gin.Context) (string, error) {
 	var buf = make([]byte, 64)
 	_, err := rand.Read(buf)
 	if err != nil {
@@ -84,10 +86,15 @@ func GenerateRefreshToken(user *database.User) (string, error) {
 	database.GetInstance().Create(&database.RefreshToken{
 		UserID:    user.ID,
 		Token:     newToken,
+		Nonce:     GenerateTokenNonce(c),
 		ExpiresOn: time.Now().Add(time.Hour * time.Duration(24*refreshLifeSpan)),
 	})
 
 	return newToken, nil
+}
+
+func GenerateTokenNonce(c *gin.Context) string {
+	return encryption.Hash(fmt.Sprintf("%s--%s", c.RemoteIP(), c.Request.Header.Get("User-Agent")))
 }
 
 func IsTokenValid(c *gin.Context) error {

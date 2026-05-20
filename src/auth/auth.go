@@ -81,7 +81,7 @@ func Login(c *gin.Context) {
 		SendError(c, http.StatusUnauthorized, err)
 		return
 	}
-	refreshToken, err := GenerateRefreshToken(&user)
+	refreshToken, err := GenerateRefreshToken(&user, c)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, err)
 		return
@@ -112,6 +112,10 @@ func Refresh(c *gin.Context) {
 	if time.Now().After(token.ExpiresOn) {
 		database.GetInstance().Delete(&token)
 		SendError(c, http.StatusUnauthorized, errors.New("login expired"))
+		return
+	}
+	if token.Nonce != GenerateTokenNonce(c) {
+		SendError(c, http.StatusUnauthorized, errors.New("logged in from another location"))
 		return
 	}
 
