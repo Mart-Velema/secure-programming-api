@@ -70,7 +70,11 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	token, err := GenerateToken(&user)
+	if err != nil {
+		SendError(c, http.StatusUnauthorized, err)
+	}
+	c.JSON(http.StatusOK, token)
 }
 
 func Logout(c *gin.Context) {
