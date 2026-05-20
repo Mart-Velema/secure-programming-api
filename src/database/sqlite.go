@@ -58,7 +58,7 @@ func deriveKey(passcode string) []byte {
 	)
 }
 
-func setupEncryptor() *encryption.Encryptor {
+func GetEncryptor() *encryption.Encryptor {
 	config := encryption.DefaultConfig()
 
 	if key, exists := os.LookupEnv("ENCRYPTION_PASSCODE"); exists {
@@ -82,7 +82,7 @@ func createDB() {
 		log.Fatal(err)
 	}
 
-	encryptor := setupEncryptor()
+	encryptor := GetEncryptor()
 	err = db.Use(encryption.NewPlugin(encryptor))
 	if err != nil {
 		log.Fatal(err)

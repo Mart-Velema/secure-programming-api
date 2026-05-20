@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/cgholdings/go-common/database/encryption"
 	"github.com/gin-gonic/gin"
 	"guineatrade.nhlstenden.com/src/database"
 )
@@ -24,6 +25,11 @@ func (user *registerUser) toDatabaseRecord() database.User {
 		Password:    user.Password,
 		PhoneNumber: user.PhoneNumber,
 	}
+}
+
+type loginUser struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 func Register(c *gin.Context) {
@@ -49,7 +55,22 @@ func Register(c *gin.Context) {
 }
 
 func Login(c *gin.Context) {
-	c.Status(http.StatusOK)
+	var loggedinUser loginUser
+	if err := c.BindJSON(&loggedinUser); err != nil {
+		SendError(c, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	var user database.User
+	if result := database.GetInstance().
+		Where("email_hash = ?", encryption.Hash(loggedinUser.Email)).
+		Where("password = ?", encryption.Hash(loggedinUser.Password)).
+		First(&user); result.Error != nil {
+		SendError(c, http.StatusNotFound, result.Error)
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
 }
 
 func Logout(c *gin.Context) {
