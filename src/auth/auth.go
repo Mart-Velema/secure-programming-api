@@ -82,7 +82,13 @@ func Logout(c *gin.Context) {
 }
 
 func Me(c *gin.Context) {
-	c.Status(http.StatusOK)
+	user, err := ExtractTokenUser(c)
+	if err != nil {
+		SendError(c, http.StatusNotFound, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
 }
 
 func isEmailValid(e string) bool {

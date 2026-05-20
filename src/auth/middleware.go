@@ -90,9 +90,9 @@ func ExtractTokenUser(c *gin.Context) (database.User, error) {
 		return database.User{}, errors.New("token is invalid")
 	}
 
-	userId, err := strconv.Atoi(claims["user_id"].(string))
-	if err != nil {
-		return database.User{}, err
+	userId, ok := claims["user_id"].(float64)
+	if !ok {
+		return database.User{}, errors.New("supplied ID is not a valid integer")
 	}
 
 	var user database.User
