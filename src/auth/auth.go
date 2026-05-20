@@ -32,6 +32,11 @@ type loginUser struct {
 	Password string `json:"password"`
 }
 
+type Tokens struct {
+	JWT     string `json:"jwt,omitempty"`
+	Refresh string `json:"refresh,omitempty"`
+}
+
 func Register(c *gin.Context) {
 	var postRegister registerUser
 	if err := c.BindJSON(&postRegister); err != nil {
@@ -70,11 +75,20 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := GenerateToken(&user)
+	JWT, err := GenerateToken(&user)
 	if err != nil {
 		SendError(c, http.StatusUnauthorized, err)
+		return
 	}
-	c.JSON(http.StatusOK, token)
+	refreshToken, err := GenerateRefreshToken(&user)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, Tokens{
+		JWT:     JWT,
+		Refresh: refreshToken,
+	})
 }
 
 func Logout(c *gin.Context) {

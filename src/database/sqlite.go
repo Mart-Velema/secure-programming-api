@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/cgholdings/go-common/database/encryption"
 	"golang.org/x/crypto/argon2"
@@ -19,14 +20,15 @@ var (
 
 type User struct {
 	gorm.Model  `json:"-"`
-	Name        string  `json:"name" gorm:"unique"`
-	Email       string  `json:"email" encrypt:"true"`
-	EmailHash   string  `json:"-" hash:"Email" gorm:"unique"`
-	Password    string  `json:"password" hash:"Password"`
-	PhoneNumber string  `json:"tel" encrypt:"true"`
-	NumberHash  string  `json:"-" hash:"PhoneNumber" gorm:"unique"`
-	Balance     int64   `json:"-" gorm:"default:0"`
-	Trades      []Trade `gorm:"foreignKey:UserID"`
+	Name        string         `json:"name" gorm:"unique"`
+	Email       string         `json:"email" encrypt:"true"`
+	EmailHash   string         `json:"-" hash:"Email" gorm:"unique"`
+	Password    string         `json:"password" hash:"Password"`
+	PhoneNumber string         `json:"tel" encrypt:"true"`
+	NumberHash  string         `json:"-" hash:"PhoneNumber" gorm:"unique"`
+	Balance     int64          `json:"-" gorm:"default:0"`
+	Trades      []Trade        `gorm:"foreignKey:UserID"`
+	Token       []RefreshToken `gorm:"foreignKey:UserID"`
 }
 
 func (u User) MarshalJSON() ([]byte, error) {
@@ -41,6 +43,13 @@ func (u User) MarshalJSON() ([]byte, error) {
 		PhoneNumber: u.PhoneNumber,
 		Balance:     u.Balance,
 	})
+}
+
+type RefreshToken struct {
+	UserID    uint
+	Token     string `gorm:"uniqueIndex"`
+	ExpiresOn time.Time
+	Revoked   bool
 }
 
 type Trade struct {
@@ -103,7 +112,7 @@ func createDB() {
 		log.Fatal(err)
 	}
 
-	err = db.AutoMigrate(&User{}, &Trade{}, &TradeItem{})
+	err = db.AutoMigrate(&User{}, &Trade{}, &TradeItem{}, &RefreshToken{})
 	if err != nil {
 		log.Fatal(err)
 	}

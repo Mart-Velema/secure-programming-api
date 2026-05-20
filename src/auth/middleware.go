@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"log"
 	"net/http"
@@ -23,16 +25,16 @@ func init() {
 	if err != nil {
 		log.Fatalf("Error loading .env file: %s\n", err)
 	}
-	tokenLifeSpanString, lifespanExists := os.LookupEnv("JWT_TIMEOUT_HOURS")
+	tokenLifeSpanString, lifespanExists := os.LookupEnv("JWT_TIMEOUT_MINUTES")
 	jwtSecretString, secretsExists := os.LookupEnv("JWT_SECRET_KEY")
 
 	if !secretsExists || !lifespanExists {
-		log.Fatal("JWT_TIMEOUT_HOURS and/or JWT_SECRET_KEY unset")
+		log.Fatal("JWT_TIMEOUT_MINUTES and/or JWT_SECRET_KEY unset")
 	}
 
 	tokenLifeSpan, err = strconv.Atoi(tokenLifeSpanString)
 	if err != nil {
-		log.Fatal("JWT_TIMEOUT_HOURS is not a valid integer")
+		log.Fatal("JWT_TIMEOUT_MINUTES is not a valid integer")
 	}
 
 	if len(jwtSecretString) < 64 {
@@ -62,6 +64,24 @@ func GenerateToken(user *database.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 
 	return token.SignedString([]byte(jwtSecret))
+}
+
+func GenerateRefreshToken(user *database.User) (string, error) {
+	var buf = make([]byte, 64)
+	_, err := rand.Read(buf)
+	if err != nil {
+		return "", err
+	}
+
+	newToken := base64.StdEncoding.EncodeToString(buf)
+	database.GetInstance().Create(&database.RefreshToken{
+		UserID:    user.ID,
+		Token:     newToken,
+		ExpiresOn: time.Now().Add(time.Hour * 24 * 7),
+		Revoked:   false,
+	})
+
+	return newToken, nil
 }
 
 func IsTokenValid(c *gin.Context) error {
