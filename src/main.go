@@ -51,6 +51,7 @@ func main() {
 		authGroup := apiRestricted.Group("/auth")
 		{
 			authGroup.POST("/logout", auth.Logout)
+			authGroup.POST("/logout/all", auth.LogoutAll)
 			authGroup.GET("/me", auth.Me)
 
 			multifactorAuthGroup := authGroup.Group("/mfa")

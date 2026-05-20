@@ -127,7 +127,35 @@ func Refresh(c *gin.Context) {
 }
 
 func Logout(c *gin.Context) {
-	c.Status(http.StatusOK)
+	var refreshToken Tokens
+	if err := c.BindJSON(&refreshToken); err != nil {
+		SendError(c, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	if result := database.GetInstance().Delete(&refreshToken.Refresh); result.Error != nil {
+		SendError(c, http.StatusNotFound, result.Error)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+func LogoutAll(c *gin.Context) {
+	user, err := ExtractTokenUser(c)
+	if err != nil {
+		SendError(c, http.StatusNotFound, err)
+		return
+	}
+
+	if result := database.GetInstance().
+		Where("user_id = ?", &user.ID).
+		Delete(&database.RefreshToken{}); result.Error != nil {
+		SendError(c, http.StatusNotFound, result.Error)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func Me(c *gin.Context) {
