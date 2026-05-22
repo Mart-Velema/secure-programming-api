@@ -19,7 +19,7 @@ type TotpCodes struct {
 	RecoveryCode string `json:"recovery,omitempty"`
 }
 
-func RegisterTOPT(c *gin.Context) {
+func RegisterTOTP(c *gin.Context) {
 	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
 		auth.SendError(c, http.StatusNotFound, err)
@@ -43,7 +43,7 @@ func RegisterTOPT(c *gin.Context) {
 	})
 }
 
-func VerifyTOPT(c *gin.Context) {
+func VerifyTOTP(c *gin.Context) {
 	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
 		auth.SendError(c, http.StatusNotFound, err)
@@ -66,7 +66,7 @@ func VerifyTOPT(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func ResetTOPT(c *gin.Context) {
+func ResetTOTP(c *gin.Context) {
 	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
 		auth.SendError(c, http.StatusNotFound, err)

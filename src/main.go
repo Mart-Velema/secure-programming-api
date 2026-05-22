@@ -57,9 +57,9 @@ func main() {
 
 			multifactorAuthGroup := authGroup.Group("/mfa")
 			{
-				multifactorAuthGroup.POST("/topt/register", mfa.RegisterTOPT)
-				multifactorAuthGroup.POST("/topt/verify", mfa.VerifyTOPT)
-				multifactorAuthGroup.DELETE("/topt/reset", mfa.ResetTOPT)
+				multifactorAuthGroup.POST("/totp/register", mfa.RegisterTOTP)
+				multifactorAuthGroup.POST("/totp/verify", mfa.VerifyTOTP)
+				multifactorAuthGroup.DELETE("/totp/reset", mfa.ResetTOTP)
 			}
 		}
 	}
