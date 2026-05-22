@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"guineatrade.nhlstenden.com/src/auth"
 	"guineatrade.nhlstenden.com/src/auth/mfa"
+	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/database"
 )
 
@@ -46,7 +47,7 @@ func main() {
 	}
 
 	apiRestricted := router.Group("/api/v1")
-	apiRestricted.Use(auth.JwtAuthMiddleware())
+	apiRestricted.Use(middleware.JwtAuthMiddleware())
 	{
 		authGroup := apiRestricted.Group("/auth")
 		{

@@ -8,6 +8,7 @@ import (
 
 	"github.com/cgholdings/go-common/database/encryption"
 	"github.com/gin-gonic/gin"
+	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/database"
 )
 
@@ -76,12 +77,12 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	JWT, err := GenerateToken(&user)
+	JWT, err := middleware.GenerateToken(&user)
 	if err != nil {
 		SendError(c, http.StatusUnauthorized, err)
 		return
 	}
-	refreshToken, err := GenerateRefreshToken(&user, c)
+	refreshToken, err := middleware.GenerateRefreshToken(&user, c)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, err)
 		return
@@ -114,12 +115,12 @@ func Refresh(c *gin.Context) {
 		SendError(c, http.StatusUnauthorized, errors.New("login expired"))
 		return
 	}
-	if token.Nonce != GenerateTokenNonce(c) {
+	if token.Nonce != middleware.GenerateTokenNonce(c) {
 		SendError(c, http.StatusUnauthorized, errors.New("logged in from another location"))
 		return
 	}
 
-	jwt, err := GenerateToken(&token.User)
+	jwt, err := middleware.GenerateToken(&token.User)
 	if err != nil {
 		SendError(c, http.StatusUnauthorized, err)
 		return
@@ -146,7 +147,7 @@ func Logout(c *gin.Context) {
 }
 
 func LogoutAll(c *gin.Context) {
-	user, err := ExtractTokenUser(c)
+	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
 		SendError(c, http.StatusNotFound, err)
 		return
@@ -163,7 +164,7 @@ func LogoutAll(c *gin.Context) {
 }
 
 func Me(c *gin.Context) {
-	user, err := ExtractTokenUser(c)
+	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
 		SendError(c, http.StatusNotFound, err)
 		return
