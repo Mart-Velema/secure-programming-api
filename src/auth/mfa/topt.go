@@ -16,7 +16,7 @@ import (
 
 type TotpCodes struct {
 	Code         string `json:"code,omitempty"`
-	RecoveryCode string `json:"recoveryCode,omitempty"`
+	RecoveryCode string `json:"recovery,omitempty"`
 }
 
 func RegisterTOPT(c *gin.Context) {
@@ -39,7 +39,7 @@ func RegisterTOPT(c *gin.Context) {
 
 	c.JSON(http.StatusOK, TotpCodes{
 		Code:         randomBytes,
-		RecoveryCode: recoveryCode,
+		RecoveryCode: recoveryHash,
 	})
 }
 
@@ -67,5 +67,27 @@ func VerifyTOPT(c *gin.Context) {
 }
 
 func ResetTOPT(c *gin.Context) {
-	c.Status(http.StatusOK)
+	user, err := middleware.ExtractTokenUser(c)
+	if err != nil {
+		auth.SendError(c, http.StatusNotFound, err)
+		return
+	}
+	var passcode TotpCodes
+	err = c.ShouldBindJSON(&passcode)
+	if err != nil {
+		auth.SendError(c, http.StatusBadRequest, err)
+		return
+	}
+
+	database.GetInstance().First(&user)
+	if passcode.RecoveryCode != user.RecoveryCode {
+		auth.SendError(c, http.StatusUnauthorized, errors.New("recovery code does not match"))
+		return
+	}
+
+	user.TotpSecret = ""
+	user.RecoveryCode = ""
+	database.GetInstance().Save(&user)
+
+	c.Status(http.StatusNoContent)
 }
