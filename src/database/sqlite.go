@@ -2,6 +2,7 @@ package database
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -14,21 +15,25 @@ import (
 )
 
 var (
-	lock     = &sync.Mutex{}
-	instance *gorm.DB
+	lockSqlite        = &sync.Mutex{}
+	lockEncryptor     = &sync.Mutex{}
+	instanceDB        *gorm.DB
+	instanceEncryptor *encryption.Encryptor
 )
 
 type User struct {
-	gorm.Model  `json:"-"`
-	Name        string         `json:"name" gorm:"unique"`
-	Email       string         `json:"email" encrypt:"true"`
-	EmailHash   string         `json:"-" hash:"Email" gorm:"unique"`
-	Password    string         `json:"password" hash:"Password"`
-	PhoneNumber string         `json:"tel" encrypt:"true"`
-	NumberHash  string         `json:"-" hash:"PhoneNumber" gorm:"unique"`
-	Balance     int64          `json:"-" gorm:"default:0"`
-	Trades      []Trade        `gorm:"foreignKey:UserID"`
-	Token       []RefreshToken `gorm:"foreignKey:UserID"`
+	gorm.Model   `json:"-"`
+	Name         string         `json:"name" gorm:"unique"`
+	Email        string         `json:"email" encrypt:"true"`
+	EmailHash    string         `json:"-" hash:"Email" gorm:"unique"`
+	Password     string         `json:"password" hash:"Password"`
+	PhoneNumber  string         `json:"tel" encrypt:"true"`
+	NumberHash   string         `json:"-" hash:"PhoneNumber" gorm:"unique"`
+	Balance      int64          `json:"-" gorm:"default:0"`
+	TotpSecret   string         `encrypt:"true"`
+	RecoveryCode string         `hash:"true"`
+	Trades       []Trade        `gorm:"foreignKey:UserID"`
+	Token        []RefreshToken `gorm:"foreignKey:UserID"`
 }
 
 func (u User) MarshalJSON() ([]byte, error) {
@@ -84,11 +89,17 @@ func deriveKey(passcode string) []byte {
 	)
 }
 
-func GetEncryptor() *encryption.Encryptor {
+func createEncryptor() {
+	if instanceEncryptor != nil {
+		return
+	}
+
 	config := encryption.DefaultConfig()
 
 	if key, exists := os.LookupEnv("ENCRYPTION_PASSCODE"); exists {
-		config.Key = deriveKey(key)
+		derived := deriveKey(key)
+		fmt.Printf("Derived key: %x\n", derived)
+		config.Key = derived
 	}
 
 	encryptor, err := encryption.NewEncryptorFromConfig(config)
@@ -96,11 +107,22 @@ func GetEncryptor() *encryption.Encryptor {
 		log.Fatal(err)
 	}
 
-	return encryptor
+	instanceEncryptor = encryptor
+}
+
+func GetEncryptor() *encryption.Encryptor {
+	if instanceEncryptor != nil {
+		return instanceEncryptor
+	}
+	lockEncryptor.Lock()
+	defer lockEncryptor.Unlock()
+	createEncryptor()
+
+	return instanceEncryptor
 }
 
 func createDB() {
-	if instance != nil {
+	if instanceDB != nil {
 		return
 	}
 	db, err := gorm.Open(sqlite.Open(os.Getenv("SQLITE_FILE_LOCATION")), &gorm.Config{})
@@ -119,16 +141,16 @@ func createDB() {
 		log.Fatal(err)
 	}
 
-	instance = db
+	instanceDB = db
 }
 
 func GetInstance() *gorm.DB {
-	if instance != nil {
-		return instance
+	if instanceDB != nil {
+		return instanceDB
 	}
-	lock.Lock()
-	defer lock.Unlock()
+	lockSqlite.Lock()
+	defer lockSqlite.Unlock()
 	createDB()
 
-	return instance
+	return instanceDB
 }
