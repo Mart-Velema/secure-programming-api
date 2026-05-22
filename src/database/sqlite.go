@@ -2,14 +2,12 @@ package database
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/cgholdings/go-common/database/encryption"
-	"golang.org/x/crypto/argon2"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -74,35 +72,12 @@ type TradeItem struct {
 	Quantity   uint
 }
 
-func deriveKey(passcode string) []byte {
-	bytesKey := []byte(passcode)
-	mid := len(bytesKey) / 2
-	salt := bytesKey[mid : mid+16]
-
-	return argon2.IDKey(
-		bytesKey,
-		salt,
-		3,
-		64*1024,
-		4,
-		32,
-	)
-}
-
 func createEncryptor() {
 	if instanceEncryptor != nil {
 		return
 	}
 
-	config := encryption.DefaultConfig()
-
-	if key, exists := os.LookupEnv("ENCRYPTION_PASSCODE"); exists {
-		derived := deriveKey(key)
-		fmt.Printf("Derived key: %x\n", derived)
-		config.Key = derived
-	}
-
-	encryptor, err := encryption.NewEncryptorFromConfig(config)
+	encryptor, err := encryption.NewEncryptorFromConfig(encryption.DefaultConfig())
 	if err != nil {
 		log.Fatal(err)
 	}
