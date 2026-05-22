@@ -4,9 +4,11 @@ import (
 	"crypto"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pquerna/otp/totp"
 	"guineatrade.nhlstenden.com/src/auth"
 	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/database"
@@ -42,7 +44,26 @@ func RegisterTOPT(c *gin.Context) {
 }
 
 func VerifyTOPT(c *gin.Context) {
+	user, err := middleware.ExtractTokenUser(c)
+	if err != nil {
+		auth.SendError(c, http.StatusNotFound, err)
+		return
+	}
+	var passcode TotpCodes
+	err = c.ShouldBindJSON(&passcode)
+	if err != nil {
+		auth.SendError(c, http.StatusBadRequest, err)
+		return
+	}
 
+	database.GetInstance().First(&user)
+
+	if !totp.Validate(passcode.Code, user.TotpSecret) {
+		auth.SendError(c, http.StatusUnauthorized, errors.New("invalid code"))
+		return
+	}
+
+	c.Status(http.StatusOK)
 }
 
 func ResetTOPT(c *gin.Context) {
