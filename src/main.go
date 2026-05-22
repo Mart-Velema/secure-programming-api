@@ -56,8 +56,9 @@ func main() {
 
 			multifactorAuthGroup := authGroup.Group("/mfa")
 			{
-				multifactorAuthGroup.POST("/sms/send", mfa.SendSMS)
-				multifactorAuthGroup.POST("/sms/verify", mfa.VerifySMS)
+				multifactorAuthGroup.POST("/topt/register", mfa.RegisterTOPT)
+				multifactorAuthGroup.POST("/topt/verify", mfa.VerifyTOPT)
+				multifactorAuthGroup.DELETE("/topt/reset", mfa.ResetTOPT)
 			}
 		}
 	}
