@@ -17,21 +17,14 @@ type registerUser struct {
 	Name           string `json:"name"`
 	Password       string `json:"password"`
 	PasswordVerify string `json:"passwordVerify"`
-	PhoneNumber    string `json:"tel"`
 }
 
 func (user *registerUser) toDatabaseRecord() database.User {
 	return database.User{
-		Name:        user.Name,
-		Email:       user.Email,
-		Password:    user.Password,
-		PhoneNumber: user.PhoneNumber,
+		Name:     user.Name,
+		Email:    user.Email,
+		Password: user.Password,
 	}
-}
-
-type loginUser struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
 }
 
 type Tokens struct {
@@ -41,7 +34,7 @@ type Tokens struct {
 
 func Register(c *gin.Context) {
 	var postRegister registerUser
-	if err := c.BindJSON(&postRegister); err != nil {
+	if err := c.ShouldBindJSON(&postRegister); err != nil {
 		SendError(c, http.StatusUnprocessableEntity, err)
 		return
 	}
@@ -62,16 +55,15 @@ func Register(c *gin.Context) {
 }
 
 func Login(c *gin.Context) {
-	var loggedinUser loginUser
-	if err := c.BindJSON(&loggedinUser); err != nil {
+	var user database.User
+	if err := c.ShouldBindJSON(&user); err != nil {
 		SendError(c, http.StatusUnprocessableEntity, err)
 		return
 	}
 
-	var user database.User
 	if result := database.GetInstance().
-		Where("email_hash = ?", encryption.Hash(loggedinUser.Email)).
-		Where("password = ?", encryption.Hash(loggedinUser.Password)).
+		Where("email_hash = ?", encryption.Hash(user.Email)).
+		Where("password = ?", encryption.Hash(user.Password)).
 		First(&user); result.Error != nil {
 		SendError(c, http.StatusNotFound, result.Error)
 		return
@@ -96,7 +88,7 @@ func Login(c *gin.Context) {
 
 func Refresh(c *gin.Context) {
 	var refreshToken Tokens
-	if err := c.BindJSON(&refreshToken); err != nil {
+	if err := c.ShouldBindJSON(&refreshToken); err != nil {
 		SendError(c, http.StatusUnprocessableEntity, err)
 		return
 	}
@@ -133,7 +125,7 @@ func Refresh(c *gin.Context) {
 
 func Logout(c *gin.Context) {
 	var refreshToken Tokens
-	if err := c.BindJSON(&refreshToken); err != nil {
+	if err := c.ShouldBindJSON(&refreshToken); err != nil {
 		SendError(c, http.StatusUnprocessableEntity, err)
 		return
 	}
