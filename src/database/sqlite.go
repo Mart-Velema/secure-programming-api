@@ -37,10 +37,12 @@ func (u User) MarshalJSON() ([]byte, error) {
 		Name    string `json:"name"`
 		Email   string `json:"email"`
 		Balance int64  `json:"balance"`
+		HasMFA  bool   `json:"mfaEnabled"`
 	}{
 		Name:    u.Name,
 		Email:   u.Email,
 		Balance: u.Balance,
+		HasMFA:  len(u.RecoveryCode) != 0,
 	})
 }
 
