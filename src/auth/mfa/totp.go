@@ -49,16 +49,15 @@ func VerifyTOTP(c *gin.Context) {
 		auth.SendError(c, http.StatusNotFound, err)
 		return
 	}
-	var passcode TotpCodes
-	err = c.ShouldBindJSON(&passcode)
+	passcode, err := middleware.ExtractTOTP(c)
 	if err != nil {
-		auth.SendError(c, http.StatusBadRequest, err)
+		auth.SendError(c, http.StatusUnauthorized, err)
 		return
 	}
 
 	database.GetInstance().First(&user)
 
-	if !totp.Validate(passcode.Code, user.TotpSecret) {
+	if !totp.Validate(passcode, user.TotpSecret) {
 		auth.SendError(c, http.StatusUnauthorized, errors.New("invalid code"))
 		return
 	}
@@ -72,16 +71,30 @@ func ResetTOTP(c *gin.Context) {
 		auth.SendError(c, http.StatusNotFound, err)
 		return
 	}
-	var passcode TotpCodes
-	err = c.ShouldBindJSON(&passcode)
+	database.GetInstance().First(&user)
+
+	passcode, err := middleware.ExtractTOTP(c)
 	if err != nil {
-		auth.SendError(c, http.StatusBadRequest, err)
+		recoveryCode := c.Request.Header.Get("X-Recovery-Code")
+		if len(recoveryCode) == 0 {
+			auth.SendError(c, http.StatusUnauthorized, errors.New("no TOTP or recovery code supplied"))
+			return
+		}
+		if recoveryCode != user.RecoveryCode {
+			auth.SendError(c, http.StatusUnauthorized, errors.New("recovery code does not match"))
+			return
+		}
+		user.TotpSecret = ""
+		user.RecoveryCode = ""
+		database.GetInstance().Save(&user)
+
+		c.Status(http.StatusNoContent)
+
 		return
 	}
 
-	database.GetInstance().First(&user)
-	if passcode.RecoveryCode != user.RecoveryCode {
-		auth.SendError(c, http.StatusUnauthorized, errors.New("recovery code does not match"))
+	if !totp.Validate(passcode, user.TotpSecret) {
+		auth.SendError(c, http.StatusUnauthorized, errors.New("invalid code"))
 		return
 	}
 
