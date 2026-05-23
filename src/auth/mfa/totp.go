@@ -74,30 +74,21 @@ func ResetTOTP(c *gin.Context) {
 	database.GetInstance().First(&user)
 
 	passcode, err := middleware.ExtractTOTP(c)
-	if err != nil {
-		recoveryCode := c.Request.Header.Get("X-Recovery-Code")
-		if len(recoveryCode) == 0 {
-			auth.SendError(c, http.StatusUnauthorized, errors.New("no TOTP or recovery code supplied"))
+	if err == nil {
+		if !totp.Validate(passcode, user.TotpSecret) {
+			auth.SendError(c, http.StatusUnauthorized, errors.New("invalid code"))
 			return
+		}
+	} else {
+		recoveryCode, err := middleware.ExtractRecoveryCode(c)
+		if err != nil {
+			c.Status(http.StatusUnauthorized)
 		}
 		if recoveryCode != user.RecoveryCode {
 			auth.SendError(c, http.StatusUnauthorized, errors.New("recovery code does not match"))
 			return
 		}
-		user.TotpSecret = ""
-		user.RecoveryCode = ""
-		database.GetInstance().Save(&user)
-
-		c.Status(http.StatusNoContent)
-
-		return
 	}
-
-	if !totp.Validate(passcode, user.TotpSecret) {
-		auth.SendError(c, http.StatusUnauthorized, errors.New("invalid code"))
-		return
-	}
-
 	user.TotpSecret = ""
 	user.RecoveryCode = ""
 	database.GetInstance().Save(&user)

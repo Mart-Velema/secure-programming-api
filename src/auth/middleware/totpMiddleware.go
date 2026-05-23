@@ -9,7 +9,7 @@ import (
 	"guineatrade.nhlstenden.com/src/database"
 )
 
-func totpMiddlewareAuth() gin.HandlerFunc {
+func TotpMiddlewareAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, err := ExtractTokenUser(c)
 		if err != nil {
@@ -37,6 +37,15 @@ func totpMiddlewareAuth() gin.HandlerFunc {
 
 func ExtractTOTP(c *gin.Context) (string, error) {
 	TotpToken := c.Request.Header.Get("X-TOTP-Code")
+	if len(TotpToken) == 0 {
+		return "", errors.New("can't find token in HTTP headers")
+	}
+
+	return TotpToken, nil
+}
+
+func ExtractRecoveryCode(c *gin.Context) (string, error) {
+	TotpToken := c.Request.Header.Get("X-Recovery-Code")
 	if len(TotpToken) == 0 {
 		return "", errors.New("can't find token in HTTP headers")
 	}
