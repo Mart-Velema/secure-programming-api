@@ -2,7 +2,6 @@ package auth
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"regexp"
 	"time"
@@ -208,12 +207,9 @@ func UpdatePassword(c *gin.Context) {
 		}
 	}
 
-	fmt.Println(user.Password)
 	user.Password = requestUser.NewPassword
-	fmt.Println(user.Password)
-	database.GetInstance().Save(&user)
-	fmt.Println(user.Password)
-	
+	database.GetInstance().Select("password").Save(&user)
+
 	if result := database.GetInstance().
 		Where("user_id = ?", user.ID).
 		Delete(&database.RefreshToken{}); result.Error != nil {

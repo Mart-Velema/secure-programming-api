@@ -35,7 +35,7 @@ func RegisterTOTP(c *gin.Context) {
 
 	user.RecoveryCode = recoveryHash
 	user.TotpSecret = randomBytes
-	database.GetInstance().Save(&user)
+	database.GetInstance().Select("totp_secret", "recovery_code").Save(&user)
 
 	c.JSON(http.StatusOK, TotpCodes{
 		Code:         randomBytes,
@@ -89,9 +89,10 @@ func ResetTOTP(c *gin.Context) {
 			return
 		}
 	}
+
 	user.TotpSecret = ""
 	user.RecoveryCode = ""
-	database.GetInstance().Save(&user)
+	database.GetInstance().Select("totp_secret", "recovery_code").Save(&user)
 
 	c.Status(http.StatusNoContent)
 }
