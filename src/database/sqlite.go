@@ -32,6 +32,10 @@ type User struct {
 	Token        []RefreshToken `gorm:"foreignKey:UserID"`
 }
 
+func (u User) HasMFAEnabled() bool {
+	return len(u.RecoveryCode) != 0
+}
+
 func (u User) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Name    string `json:"name"`
@@ -42,7 +46,7 @@ func (u User) MarshalJSON() ([]byte, error) {
 		Name:    u.Name,
 		Email:   u.Email,
 		Balance: u.Balance,
-		HasMFA:  len(u.RecoveryCode) != 0,
+		HasMFA:  u.HasMFAEnabled(),
 	})
 }
 

@@ -2,12 +2,14 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"time"
 
 	"github.com/cgholdings/go-common/database/encryption"
 	"github.com/gin-gonic/gin"
+	"github.com/pquerna/otp/totp"
 	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/database"
 )
@@ -17,6 +19,13 @@ type registerUser struct {
 	Name           string `json:"name"`
 	Password       string `json:"password"`
 	PasswordVerify string `json:"passwordVerify"`
+}
+
+type patchUser struct {
+	Email             string `json:"email"`
+	CurrentPassword   string `json:"currentPassword"`
+	NewPassword       string `json:"newPassword"`
+	NewPasswordVerify string `json:"newPasswordVerify"`
 }
 
 func (user *registerUser) toDatabaseRecord() database.User {
@@ -163,6 +172,56 @@ func Me(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, user)
+}
+
+func UpdatePassword(c *gin.Context) {
+	var requestUser patchUser
+	if err := c.ShouldBindJSON(&requestUser); err != nil {
+		SendError(c, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	var user database.User
+	if result := database.GetInstance().
+		Where("email_hash = ?", encryption.Hash(requestUser.Email)).
+		Where("password = ?", encryption.Hash(requestUser.CurrentPassword)).
+		First(&user); result.Error != nil {
+		SendError(c, http.StatusNotFound, result.Error)
+		return
+	}
+
+	if requestUser.NewPassword != requestUser.NewPasswordVerify {
+		SendError(c, http.StatusBadRequest, errors.New("passwords do not match"))
+		return
+	}
+
+	if user.HasMFAEnabled() {
+		totpToken, err := middleware.ExtractTOTP(c)
+		if err != nil {
+			SendError(c, http.StatusNotFound, err)
+			return
+		}
+		if totp.Validate(totpToken, user.TotpSecret) {
+			c.Status(http.StatusUnauthorized)
+			c.Abort()
+			return
+		}
+	}
+
+	fmt.Println(user.Password)
+	user.Password = requestUser.NewPassword
+	fmt.Println(user.Password)
+	database.GetInstance().Save(&user)
+	fmt.Println(user.Password)
+	
+	if result := database.GetInstance().
+		Where("user_id = ?", user.ID).
+		Delete(&database.RefreshToken{}); result.Error != nil {
+		SendError(c, http.StatusNotFound, result.Error)
+		return
+	}
+
+	c.Status(http.StatusAccepted)
 }
 
 func isEmailValid(e string) bool {
