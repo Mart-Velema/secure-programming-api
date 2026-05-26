@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"guineatrade.nhlstenden.com/src/auth"
 	"guineatrade.nhlstenden.com/src/auth/mfa"
+	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/database"
 )
 
@@ -46,18 +47,20 @@ func main() {
 	}
 
 	apiRestricted := router.Group("/api/v1")
-	apiRestricted.Use(auth.JwtAuthMiddleware())
+	apiRestricted.Use(middleware.JwtAuthMiddleware())
 	{
 		authGroup := apiRestricted.Group("/auth")
 		{
 			authGroup.POST("/logout", auth.Logout)
 			authGroup.POST("/logout/all", auth.LogoutAll)
 			authGroup.GET("/me", auth.Me)
+			authGroup.PATCH("/me", auth.UpdatePassword)
 
 			multifactorAuthGroup := authGroup.Group("/mfa")
 			{
-				multifactorAuthGroup.POST("/sms/send", mfa.SendSMS)
-				multifactorAuthGroup.POST("/sms/verify", mfa.VerifySMS)
+				multifactorAuthGroup.POST("/totp/register", mfa.RegisterTOTP)
+				multifactorAuthGroup.POST("/totp/verify", mfa.VerifyTOTP)
+				multifactorAuthGroup.DELETE("/totp/reset", mfa.ResetTOTP)
 			}
 		}
 	}

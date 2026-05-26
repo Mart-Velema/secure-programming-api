@@ -8,6 +8,8 @@ import (
 
 	"github.com/cgholdings/go-common/database/encryption"
 	"github.com/gin-gonic/gin"
+	"github.com/pquerna/otp/totp"
+	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/database"
 )
 
@@ -16,21 +18,21 @@ type registerUser struct {
 	Name           string `json:"name"`
 	Password       string `json:"password"`
 	PasswordVerify string `json:"passwordVerify"`
-	PhoneNumber    string `json:"tel"`
+}
+
+type patchUser struct {
+	Email             string `json:"email"`
+	CurrentPassword   string `json:"currentPassword"`
+	NewPassword       string `json:"newPassword"`
+	NewPasswordVerify string `json:"newPasswordVerify"`
 }
 
 func (user *registerUser) toDatabaseRecord() database.User {
 	return database.User{
-		Name:        user.Name,
-		Email:       user.Email,
-		Password:    user.Password,
-		PhoneNumber: user.PhoneNumber,
+		Name:     user.Name,
+		Email:    user.Email,
+		Password: user.Password,
 	}
-}
-
-type loginUser struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
 }
 
 type Tokens struct {
@@ -40,7 +42,7 @@ type Tokens struct {
 
 func Register(c *gin.Context) {
 	var postRegister registerUser
-	if err := c.BindJSON(&postRegister); err != nil {
+	if err := c.ShouldBindJSON(&postRegister); err != nil {
 		SendError(c, http.StatusUnprocessableEntity, err)
 		return
 	}
@@ -61,27 +63,26 @@ func Register(c *gin.Context) {
 }
 
 func Login(c *gin.Context) {
-	var loggedinUser loginUser
-	if err := c.BindJSON(&loggedinUser); err != nil {
+	var user database.User
+	if err := c.ShouldBindJSON(&user); err != nil {
 		SendError(c, http.StatusUnprocessableEntity, err)
 		return
 	}
 
-	var user database.User
 	if result := database.GetInstance().
-		Where("email_hash = ?", encryption.Hash(loggedinUser.Email)).
-		Where("password = ?", encryption.Hash(loggedinUser.Password)).
+		Where("email_hash = ?", encryption.Hash(user.Email)).
+		Where("password = ?", encryption.Hash(user.Password)).
 		First(&user); result.Error != nil {
 		SendError(c, http.StatusNotFound, result.Error)
 		return
 	}
 
-	JWT, err := GenerateToken(&user)
+	JWT, err := middleware.GenerateToken(&user)
 	if err != nil {
 		SendError(c, http.StatusUnauthorized, err)
 		return
 	}
-	refreshToken, err := GenerateRefreshToken(&user, c)
+	refreshToken, err := middleware.GenerateRefreshToken(&user, c)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, err)
 		return
@@ -95,7 +96,7 @@ func Login(c *gin.Context) {
 
 func Refresh(c *gin.Context) {
 	var refreshToken Tokens
-	if err := c.BindJSON(&refreshToken); err != nil {
+	if err := c.ShouldBindJSON(&refreshToken); err != nil {
 		SendError(c, http.StatusUnprocessableEntity, err)
 		return
 	}
@@ -114,12 +115,12 @@ func Refresh(c *gin.Context) {
 		SendError(c, http.StatusUnauthorized, errors.New("login expired"))
 		return
 	}
-	if token.Nonce != GenerateTokenNonce(c) {
+	if token.Nonce != middleware.GenerateTokenNonce(c) {
 		SendError(c, http.StatusUnauthorized, errors.New("logged in from another location"))
 		return
 	}
 
-	jwt, err := GenerateToken(&token.User)
+	jwt, err := middleware.GenerateToken(&token.User)
 	if err != nil {
 		SendError(c, http.StatusUnauthorized, err)
 		return
@@ -132,7 +133,7 @@ func Refresh(c *gin.Context) {
 
 func Logout(c *gin.Context) {
 	var refreshToken Tokens
-	if err := c.BindJSON(&refreshToken); err != nil {
+	if err := c.ShouldBindJSON(&refreshToken); err != nil {
 		SendError(c, http.StatusUnprocessableEntity, err)
 		return
 	}
@@ -146,7 +147,7 @@ func Logout(c *gin.Context) {
 }
 
 func LogoutAll(c *gin.Context) {
-	user, err := ExtractTokenUser(c)
+	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
 		SendError(c, http.StatusNotFound, err)
 		return
@@ -163,13 +164,60 @@ func LogoutAll(c *gin.Context) {
 }
 
 func Me(c *gin.Context) {
-	user, err := ExtractTokenUser(c)
+	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
 		SendError(c, http.StatusNotFound, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, user)
+}
+
+func UpdatePassword(c *gin.Context) {
+	var requestUser patchUser
+	if err := c.ShouldBindJSON(&requestUser); err != nil {
+		SendError(c, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	var user database.User
+	if result := database.GetInstance().
+		Where("email_hash = ?", encryption.Hash(requestUser.Email)).
+		Where("password = ?", encryption.Hash(requestUser.CurrentPassword)).
+		First(&user); result.Error != nil {
+		SendError(c, http.StatusNotFound, result.Error)
+		return
+	}
+
+	if requestUser.NewPassword != requestUser.NewPasswordVerify {
+		SendError(c, http.StatusBadRequest, errors.New("passwords do not match"))
+		return
+	}
+
+	if user.HasMFAEnabled() {
+		totpToken, err := middleware.ExtractTOTP(c)
+		if err != nil {
+			SendError(c, http.StatusNotFound, err)
+			return
+		}
+		if totp.Validate(totpToken, user.TotpSecret) {
+			c.Status(http.StatusUnauthorized)
+			c.Abort()
+			return
+		}
+	}
+
+	user.Password = requestUser.NewPassword
+	database.GetInstance().Select("password").Save(&user)
+
+	if result := database.GetInstance().
+		Where("user_id = ?", user.ID).
+		Delete(&database.RefreshToken{}); result.Error != nil {
+		SendError(c, http.StatusNotFound, result.Error)
+		return
+	}
+
+	c.Status(http.StatusAccepted)
 }
 
 func isEmailValid(e string) bool {

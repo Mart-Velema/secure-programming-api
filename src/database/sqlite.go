@@ -8,40 +8,45 @@ import (
 	"time"
 
 	"github.com/cgholdings/go-common/database/encryption"
-	"golang.org/x/crypto/argon2"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 var (
-	lock     = &sync.Mutex{}
-	instance *gorm.DB
+	lockSqlite        = &sync.Mutex{}
+	lockEncryptor     = &sync.Mutex{}
+	instanceDB        *gorm.DB
+	instanceEncryptor *encryption.Encryptor
 )
 
 type User struct {
-	gorm.Model  `json:"-"`
-	Name        string         `json:"name" gorm:"unique"`
-	Email       string         `json:"email" encrypt:"true"`
-	EmailHash   string         `json:"-" hash:"Email" gorm:"unique"`
-	Password    string         `json:"password" hash:"Password"`
-	PhoneNumber string         `json:"tel" encrypt:"true"`
-	NumberHash  string         `json:"-" hash:"PhoneNumber" gorm:"unique"`
-	Balance     int64          `json:"-" gorm:"default:0"`
-	Trades      []Trade        `gorm:"foreignKey:UserID"`
-	Token       []RefreshToken `gorm:"foreignKey:UserID"`
+	gorm.Model   `json:"-"`
+	Name         string         `json:"name" gorm:"unique"`
+	Email        string         `json:"email" encrypt:"true"`
+	EmailHash    string         `json:"-" hash:"Email" gorm:"unique"`
+	Password     string         `json:"password" hash:"Password"`
+	Balance      int64          `json:"-" gorm:"default:0"`
+	TotpSecret   string         `encrypt:"true"`
+	RecoveryCode string         `hash:"true"`
+	Trades       []Trade        `gorm:"foreignKey:UserID"`
+	Token        []RefreshToken `gorm:"foreignKey:UserID"`
+}
+
+func (u User) HasMFAEnabled() bool {
+	return len(u.RecoveryCode) != 0
 }
 
 func (u User) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Name        string `json:"name"`
-		Email       string `json:"email"`
-		PhoneNumber string `json:"tel"`
-		Balance     int64  `json:"balance"`
+		Name    string `json:"name"`
+		Email   string `json:"email"`
+		Balance int64  `json:"balance"`
+		HasMFA  bool   `json:"mfaEnabled"`
 	}{
-		Name:        u.Name,
-		Email:       u.Email,
-		PhoneNumber: u.PhoneNumber,
-		Balance:     u.Balance,
+		Name:    u.Name,
+		Email:   u.Email,
+		Balance: u.Balance,
+		HasMFA:  u.HasMFAEnabled(),
 	})
 }
 
@@ -69,38 +74,32 @@ type TradeItem struct {
 	Quantity   uint
 }
 
-func deriveKey(passcode string) []byte {
-	bytesKey := []byte(passcode)
-	mid := len(bytesKey) / 2
-	salt := bytesKey[mid : mid+16]
-
-	return argon2.IDKey(
-		bytesKey,
-		salt,
-		3,
-		64*1024,
-		4,
-		32,
-	)
-}
-
-func GetEncryptor() *encryption.Encryptor {
-	config := encryption.DefaultConfig()
-
-	if key, exists := os.LookupEnv("ENCRYPTION_PASSCODE"); exists {
-		config.Key = deriveKey(key)
+func createEncryptor() {
+	if instanceEncryptor != nil {
+		return
 	}
 
-	encryptor, err := encryption.NewEncryptorFromConfig(config)
+	encryptor, err := encryption.NewEncryptorFromConfig(encryption.DefaultConfig())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return encryptor
+	instanceEncryptor = encryptor
+}
+
+func GetEncryptor() *encryption.Encryptor {
+	if instanceEncryptor != nil {
+		return instanceEncryptor
+	}
+	lockEncryptor.Lock()
+	defer lockEncryptor.Unlock()
+	createEncryptor()
+
+	return instanceEncryptor
 }
 
 func createDB() {
-	if instance != nil {
+	if instanceDB != nil {
 		return
 	}
 	db, err := gorm.Open(sqlite.Open(os.Getenv("SQLITE_FILE_LOCATION")), &gorm.Config{})
@@ -119,16 +118,16 @@ func createDB() {
 		log.Fatal(err)
 	}
 
-	instance = db
+	instanceDB = db
 }
 
 func GetInstance() *gorm.DB {
-	if instance != nil {
-		return instance
+	if instanceDB != nil {
+		return instanceDB
 	}
-	lock.Lock()
-	defer lock.Unlock()
+	lockSqlite.Lock()
+	defer lockSqlite.Unlock()
 	createDB()
 
-	return instance
+	return instanceDB
 }

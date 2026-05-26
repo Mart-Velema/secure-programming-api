@@ -5,22 +5,19 @@ import "math/rand"
 func Seed() {
 	users := []User{
 		{
-			Name:        "John Doe",
-			Email:       "john@doe.com",
-			Password:    "P@ssw0rd",
-			PhoneNumber: "31-06-12345678",
+			Name:     "John Doe",
+			Email:    "john@doe.com",
+			Password: "P@ssw0rd",
 		},
 		{
-			Name:        "Jane Doe",
-			Email:       "jane@doe.com",
-			Password:    "P@ssw0rd",
-			PhoneNumber: "31-06-12345678",
+			Name:     "Jane Doe",
+			Email:    "jane@doe.com",
+			Password: "P@ssw0rd",
 		},
 		{
-			Name:        "Johan Doe",
-			Email:       "johan@doe.com",
-			Password:    "P@ssw0rd",
-			PhoneNumber: "31-06-12345678",
+			Name:     "Johan Doe",
+			Email:    "johan@doe.com",
+			Password: "P@ssw0rd",
 		},
 	}
 
