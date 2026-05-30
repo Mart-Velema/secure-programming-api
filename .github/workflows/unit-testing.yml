@@ -11,6 +11,17 @@ on:
       - main
 
 jobs:
+  static-code:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v6
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: 1.26.2
+          go-package: ./...
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -31,3 +42,7 @@ jobs:
         with:
           go-version: '1.26.2'
           cache: false
+      - name: Run tests
+        run: go test ./... -race
+      - name: Vet files
+        run: go vet ./...

@@ -64,7 +64,7 @@ func getPrice() {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			fmt.Println("Error decoding:", err)
+			log.Println("Error decoding:", err)
 			return
 		}
 	}
@@ -101,7 +101,7 @@ func getCurrency() {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			fmt.Println("Error decoding:", err)
+			log.Println("Error decoding:", err)
 			return
 		}
 	}
