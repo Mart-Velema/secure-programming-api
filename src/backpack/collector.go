@@ -17,6 +17,7 @@ import (
 
 var apiKey string
 var PricingCache PricingDataCache
+var CurrencyCache CurrencyDataCache
 
 var client = http.Client{
 	Transport: &http.Transport{
@@ -75,7 +76,7 @@ func init() {
 	go func() {
 		for {
 			updatePriceCache()
-			getCurrency()
+			updateCurrencyCache()
 			time.Sleep(time.Hour * 24)
 		}
 	}()
@@ -97,7 +98,7 @@ func getPrice() (PricingData, error) {
 	}(response.Body)
 
 	if response.StatusCode != 200 {
-		return pricingResponse, errors.New(fmt.Sprintf("nnable to get current pricing: %d", response.StatusCode))
+		return pricingResponse, errors.New(fmt.Sprintf("unable to get current pricing: %d", response.StatusCode))
 	}
 
 	decoder := json.NewDecoder(response.Body)
@@ -112,6 +113,40 @@ func getPrice() (PricingData, error) {
 	}
 
 	return pricingResponse, nil
+}
+
+func getCurrency() (CurrencyData, error) {
+	//	TODO: Cache these
+	//  TODO: Use proper remote URL instead of local testing URL
+	var currencyResponse CurrencyData
+	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetCurrencies/v1?key=%s", apiKey))
+	if err != nil {
+		log.Println(err)
+		return currencyResponse, err
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(response.Body)
+
+	if response.StatusCode != 200 {
+		return currencyResponse, errors.New(fmt.Sprintf("unable to get current currency conversions: %d", response.StatusCode))
+	}
+
+	decoder := json.NewDecoder(response.Body)
+	for {
+		err := decoder.Decode(&currencyResponse)
+
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return currencyResponse, err
+		}
+	}
+
+	return currencyResponse, nil
 }
 
 func updatePriceCache() {
@@ -129,38 +164,13 @@ func updatePriceCache() {
 	PricingCache = *priceCache
 }
 
-func getCurrency() {
-	//	TODO: Cache these
-	//  TODO: Use proper remote URL instead of local testing URL
-	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetCurrencies/v1?key=%s", apiKey))
+func updateCurrencyCache() {
+	priceResult, err := getCurrency()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}(response.Body)
+	currencyCache := priceResult.toCache()
 
-	if response.StatusCode != 200 {
-		log.Printf("Unable to get current currency conversion: %d", response.StatusCode)
-		return
-	}
-
-	decoder := json.NewDecoder(response.Body)
-	var currencyResponse CurrencyData
-	for {
-		err := decoder.Decode(&currencyResponse)
-
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			log.Println("Error decoding:", err)
-			return
-		}
-	}
-
-	fmt.Printf("Received item: %+v\n", currencyResponse)
+	CurrencyCache = *currencyCache
 }

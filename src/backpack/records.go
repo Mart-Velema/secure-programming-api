@@ -6,17 +6,18 @@ import (
 	"time"
 )
 
-type PricingItems string
+type currencyItems string
 
 const (
-	PricingMetal = "metal"
-	PricingKey   = "keys"
+	CurrencyUsd   = "usd"
+	CurrencyMetal = "metal"
+	CurrencyKey   = "keys"
 )
 
-type QualityItems int
+type qualityItems int
 
 const (
-	Normal QualityItems = iota
+	Normal qualityItems = iota
 	Genuine
 	Rarity2
 	Vintage
@@ -34,7 +35,7 @@ const (
 	Decorated
 )
 
-var qualityMap = map[string]QualityItems{
+var qualityMap = map[string]qualityItems{
 	"0":  Normal,
 	"1":  Genuine,
 	"2":  Rarity2,
@@ -67,7 +68,7 @@ type PricingData struct {
 type PricingDataCache struct {
 	CachedOn time.Time `json:"cachedOn"`
 	Items    map[string]struct {
-		Prices map[QualityItems]struct {
+		Prices map[qualityItems]struct {
 			Craftable   map[int]Item `json:"craftable"`
 			Uncraftable map[int]Item `json:"non-craftable"`
 		} `json:"prices"`
@@ -75,15 +76,15 @@ type PricingDataCache struct {
 }
 
 type Item struct {
-	Value    float64      `json:"value"`
-	Currency PricingItems `json:"currency"`
+	Value    float64       `json:"value"`
+	Currency currencyItems `json:"currency"`
 }
 
 func (pd *PricingData) toCache() (*PricingDataCache, error) {
 	cache := &PricingDataCache{
 		CachedOn: time.Now(),
 		Items: make(map[string]struct {
-			Prices map[QualityItems]struct {
+			Prices map[qualityItems]struct {
 				Craftable   map[int]Item `json:"craftable"`
 				Uncraftable map[int]Item `json:"non-craftable"`
 			} `json:"prices"`
@@ -98,12 +99,12 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 
 		// Initialize item in cache
 		cacheItem := struct {
-			Prices map[QualityItems]struct {
+			Prices map[qualityItems]struct {
 				Craftable   map[int]Item `json:"craftable"`
 				Uncraftable map[int]Item `json:"non-craftable"`
 			} `json:"prices"`
 		}{
-			Prices: make(map[QualityItems]struct {
+			Prices: make(map[qualityItems]struct {
 				Craftable   map[int]Item `json:"craftable"`
 				Uncraftable map[int]Item `json:"non-craftable"`
 			}),
@@ -150,7 +151,7 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 								}
 
 								item := Item{
-									Currency: PricingItems(valueMap["currency"].(string)),
+									Currency: currencyItems(valueMap["currency"].(string)),
 									Value:    valueMap["value"].(float64),
 								}
 
@@ -166,7 +167,7 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 								continue
 							}
 							item := Item{
-								Currency: PricingItems(valueMap["currency"].(string)),
+								Currency: currencyItems(valueMap["currency"].(string)),
 								Value:    valueMap["value"].(float64),
 							}
 
@@ -192,7 +193,7 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 type CurrencyData struct {
 	Response struct {
 		Success    int64 `json:"success,omitempty"`
-		Currencies map[PricingItems]struct {
+		Currencies map[currencyItems]struct {
 			Name  string `json:"name"`
 			Price struct {
 				Value    float64 `json:"value"`
@@ -200,4 +201,59 @@ type CurrencyData struct {
 			}
 		} `json:"currencies,omitempty"`
 	} `json:"response,omitempty"`
+}
+
+type CurrencyDataCache struct {
+	UpdatedOn  time.Time `json:"updatedOn"`
+	Currencies map[currencyItems]struct {
+		CurrencyUsd   float64 `json:"usd"`
+		CurrencyMetal float64 `json:"metal"`
+		CurrencyKey   float64 `json:"keys"`
+	} `json:"currencies"`
+}
+
+func (c *CurrencyData) toCache() *CurrencyDataCache {
+	var currencyCache = &CurrencyDataCache{
+		UpdatedOn: time.Now(),
+		Currencies: map[currencyItems]struct {
+			CurrencyUsd   float64 `json:"usd"`
+			CurrencyMetal float64 `json:"metal"`
+			CurrencyKey   float64 `json:"keys"`
+		}{},
+	}
+
+	metalValue := c.Response.Currencies[CurrencyMetal].Price
+	keyValue := c.Response.Currencies[CurrencyKey].Price
+
+	currencyCache.Currencies[CurrencyUsd] = struct {
+		CurrencyUsd   float64 `json:"usd"`
+		CurrencyMetal float64 `json:"metal"`
+		CurrencyKey   float64 `json:"keys"`
+	}{
+		CurrencyUsd:   1.0,
+		CurrencyMetal: 1.0 / metalValue.Value,
+		CurrencyKey:   (1.0 / metalValue.Value) / keyValue.Value,
+	}
+
+	currencyCache.Currencies[CurrencyMetal] = struct {
+		CurrencyUsd   float64 `json:"usd"`
+		CurrencyMetal float64 `json:"metal"`
+		CurrencyKey   float64 `json:"keys"`
+	}{
+		CurrencyUsd:   metalValue.Value,
+		CurrencyMetal: 1.0,
+		CurrencyKey:   1.0 / keyValue.Value,
+	}
+
+	currencyCache.Currencies[CurrencyKey] = struct {
+		CurrencyUsd   float64 `json:"usd"`
+		CurrencyMetal float64 `json:"metal"`
+		CurrencyKey   float64 `json:"keys"`
+	}{
+		CurrencyUsd:   keyValue.Value * metalValue.Value,
+		CurrencyMetal: keyValue.Value,
+		CurrencyKey:   1.0,
+	}
+
+	return currencyCache
 }
