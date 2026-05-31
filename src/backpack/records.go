@@ -69,8 +69,8 @@ type PricingDataCache struct {
 	CachedOn time.Time `json:"cachedOn"`
 	Items    map[string]struct {
 		Prices map[qualityItems]struct {
-			Craftable   map[int]Item `json:"craftable"`
-			Uncraftable map[int]Item `json:"non-craftable"`
+			Craftable   map[int]Item `json:"craftable,omitempty"`
+			Uncraftable map[int]Item `json:"non-craftable,omitempty"`
 		} `json:"prices"`
 	} `json:"items"`
 }
@@ -85,8 +85,8 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 		CachedOn: time.Now(),
 		Items: make(map[string]struct {
 			Prices map[qualityItems]struct {
-				Craftable   map[int]Item `json:"craftable"`
-				Uncraftable map[int]Item `json:"non-craftable"`
+				Craftable   map[int]Item `json:"craftable,omitempty"`
+				Uncraftable map[int]Item `json:"non-craftable,omitempty"`
 			} `json:"prices"`
 		}),
 	}
@@ -99,13 +99,13 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 
 		cacheItem := struct {
 			Prices map[qualityItems]struct {
-				Craftable   map[int]Item `json:"craftable"`
-				Uncraftable map[int]Item `json:"non-craftable"`
+				Craftable   map[int]Item `json:"craftable,omitempty"`
+				Uncraftable map[int]Item `json:"non-craftable,omitempty"`
 			} `json:"prices"`
 		}{
 			Prices: make(map[qualityItems]struct {
-				Craftable   map[int]Item `json:"craftable"`
-				Uncraftable map[int]Item `json:"non-craftable"`
+				Craftable   map[int]Item `json:"craftable,omitempty"`
+				Uncraftable map[int]Item `json:"non-craftable,omitempty"`
 			}),
 		}
 
@@ -122,8 +122,8 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 				}
 
 				qualityEntry := struct {
-					Craftable   map[int]Item `json:"craftable"`
-					Uncraftable map[int]Item `json:"non-craftable"`
+					Craftable   map[int]Item `json:"craftable,omitempty"`
+					Uncraftable map[int]Item `json:"non-craftable,omitempty"`
 				}{
 					Craftable:   make(map[int]Item),
 					Uncraftable: make(map[int]Item),
