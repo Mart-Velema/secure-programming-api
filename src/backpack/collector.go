@@ -83,7 +83,6 @@ func init() {
 }
 
 func getPrice() (PricingData, error) {
-	//	TODO: Cache these
 	//  TODO: Use proper remote URL instead of local testing URL
 	var pricingResponse PricingData
 	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetPrices/v4?key=%s", apiKey))
@@ -116,7 +115,6 @@ func getPrice() (PricingData, error) {
 }
 
 func getCurrency() (CurrencyData, error) {
-	//	TODO: Cache these
 	//  TODO: Use proper remote URL instead of local testing URL
 	var currencyResponse CurrencyData
 	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetCurrencies/v1?key=%s", apiKey))

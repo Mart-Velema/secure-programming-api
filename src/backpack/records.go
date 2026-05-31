@@ -97,7 +97,6 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 			continue
 		}
 
-		// Initialize item in cache
 		cacheItem := struct {
 			Prices map[qualityItems]struct {
 				Craftable   map[int]Item `json:"craftable"`
@@ -109,8 +108,7 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 				Uncraftable map[int]Item `json:"non-craftable"`
 			}),
 		}
-
-		// Process prices
+		
 		if prices, ok := itemMap["prices"].(map[string]any); ok {
 			for qualityStr, qualityData := range prices {
 				quality, ok := qualityMap[qualityStr]
@@ -123,7 +121,6 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 					continue
 				}
 
-				// Initialize quality entry
 				qualityEntry := struct {
 					Craftable   map[int]Item `json:"craftable"`
 					Uncraftable map[int]Item `json:"non-craftable"`
