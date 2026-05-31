@@ -1,6 +1,8 @@
 package backpack
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +15,18 @@ import (
 )
 
 var apiKey string
+
+var client = http.Client{
+	Transport: &http.Transport{
+		MaxIdleConns:    30,
+		MaxConnsPerHost: 10,
+		IdleConnTimeout: 30 * time.Second,
+		TLSClientConfig: &tls.Config{
+			ServerName:         "backpac.tf",
+			InsecureSkipVerify: false,
+		},
+	},
+}
 
 func init() {
 	err := godotenv.Load()
@@ -27,6 +41,35 @@ func init() {
 
 	apiKey = envApiKey
 
+	rootCAs, err := x509.SystemCertPool()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	conn, err := tls.Dial("tcp", "backpack.tf:443", &tls.Config{
+		RootCAs:    rootCAs,
+		ServerName: "backpack.tf",
+	})
+	defer conn.Close()
+
+	connState := conn.ConnectionState()
+	chain := connState.PeerCertificates
+
+	intermediates := x509.NewCertPool()
+	for _, cert := range chain {
+		intermediates.AddCert(cert)
+	}
+
+	opts := x509.VerifyOptions{
+		Roots:         rootCAs,
+		DNSName:       "backpack.tf",
+		Intermediates: intermediates,
+	}
+	_, err = chain[0].Verify(opts)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	go func() {
 		for {
 			getPrice()
@@ -39,7 +82,7 @@ func init() {
 func getPrice() {
 	//	TODO: Cache these
 	//  TODO: Use proper remote URL instead of local testing URL
-	response, err := http.Get(fmt.Sprintf("http://localhost:8080/api/IGetPrices/v4?key=%s", apiKey))
+	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetPrices/v4?key=%s", apiKey))
 	if err != nil {
 		log.Println(err)
 		return
@@ -76,7 +119,7 @@ func getPrice() {
 func getCurrency() {
 	//	TODO: Cache these
 	//  TODO: Use proper remote URL instead of local testing URL
-	response, err := http.Get(fmt.Sprintf("http://localhost:8080/api/IGetCurrencies/v1?key=%s", apiKey))
+	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetCurrencies/v1?key=%s", apiKey))
 	if err != nil {
 		log.Println(err)
 		return
