@@ -3,7 +3,10 @@ package backpack
 import "github.com/gin-gonic/gin"
 
 func GetPrices(c *gin.Context) {
-	c.Status(200)
+	if PricingCache.CachedOn.IsZero() {
+		c.String(404, "Cache not initialised")
+	}
+	c.JSON(200, PricingCache)
 }
 
 func GetItemDetails(c *gin.Context) {
@@ -12,5 +15,8 @@ func GetItemDetails(c *gin.Context) {
 }
 
 func GetCurrencies(c *gin.Context) {
-	c.Status(200)
+	if CurrencyCache.CachedOn.IsZero() {
+		c.String(404, "Cache not initialised")
+	}
+	c.JSON(200, CurrencyCache)
 }

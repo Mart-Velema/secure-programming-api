@@ -68,7 +68,7 @@ func main() {
 		{
 			backpackGroup.GET("/prices", backpack.GetPrices)
 			backpackGroup.GET("/prices/:item", backpack.GetItemDetails)
-			backpackGroup.GET("/curreny", backpack.GetCurrencies)
+			backpackGroup.GET("/currency", backpack.GetCurrencies)
 		}
 	}
 

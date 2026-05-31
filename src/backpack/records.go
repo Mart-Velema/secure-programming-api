@@ -108,7 +108,7 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 				Uncraftable map[int]Item `json:"non-craftable"`
 			}),
 		}
-		
+
 		if prices, ok := itemMap["prices"].(map[string]any); ok {
 			for qualityStr, qualityData := range prices {
 				quality, ok := qualityMap[qualityStr]
@@ -201,7 +201,7 @@ type CurrencyData struct {
 }
 
 type CurrencyDataCache struct {
-	UpdatedOn  time.Time `json:"updatedOn"`
+	CachedOn   time.Time `json:"cachedOn"`
 	Currencies map[currencyItems]struct {
 		CurrencyUsd   float64 `json:"usd"`
 		CurrencyMetal float64 `json:"metal"`
@@ -211,7 +211,7 @@ type CurrencyDataCache struct {
 
 func (c *CurrencyData) toCache() *CurrencyDataCache {
 	var currencyCache = &CurrencyDataCache{
-		UpdatedOn: time.Now(),
+		CachedOn: time.Now(),
 		Currencies: map[currencyItems]struct {
 			CurrencyUsd   float64 `json:"usd"`
 			CurrencyMetal float64 `json:"metal"`
