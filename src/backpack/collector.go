@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +16,7 @@ import (
 )
 
 var apiKey string
+var PricingCache PricingDataCache
 
 var client = http.Client{
 	Transport: &http.Transport{
@@ -72,20 +74,20 @@ func init() {
 
 	go func() {
 		for {
-			getPrice()
+			updatePriceCache()
 			getCurrency()
 			time.Sleep(time.Hour * 24)
 		}
 	}()
 }
 
-func getPrice() {
+func getPrice() (PricingData, error) {
 	//	TODO: Cache these
 	//  TODO: Use proper remote URL instead of local testing URL
+	var pricingResponse PricingData
 	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetPrices/v4?key=%s", apiKey))
 	if err != nil {
-		log.Println(err)
-		return
+		return pricingResponse, err
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
@@ -95,25 +97,36 @@ func getPrice() {
 	}(response.Body)
 
 	if response.StatusCode != 200 {
-		log.Printf("Unable to get current pricing: %d", response.StatusCode)
-		return
+		return pricingResponse, errors.New(fmt.Sprintf("nnable to get current pricing: %d", response.StatusCode))
 	}
 
 	decoder := json.NewDecoder(response.Body)
-	var pricingResponse PricingData
 	for {
 		err := decoder.Decode(&pricingResponse)
 
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			log.Println("Error decoding:", err)
-			return
+			return pricingResponse, err
 		}
 	}
 
-	fmt.Printf("Received item: %+v\n\n", pricingResponse)
+	return pricingResponse, nil
+}
 
+func updatePriceCache() {
+	priceResult, err := getPrice()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	priceCache, err := priceResult.toCache()
+	if err != nil {
+		log.Println(err)
+		log.Println("Using old cache")
+		return
+	}
+	PricingCache = *priceCache
 }
 
 func getCurrency() {
