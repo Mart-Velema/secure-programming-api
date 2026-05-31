@@ -160,6 +160,7 @@ func updatePriceCache() {
 		return
 	}
 	PricingCache = *priceCache
+	log.Printf("Updated Price cache on %s", time.Now().String())
 }
 
 func updateCurrencyCache() {
@@ -171,4 +172,5 @@ func updateCurrencyCache() {
 	currencyCache := priceResult.toCache()
 
 	CurrencyCache = *currencyCache
+	log.Printf("Updated Currency cache on %s", time.Now().String())
 }
