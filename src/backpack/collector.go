@@ -119,7 +119,6 @@ func getCurrency() (CurrencyData, error) {
 	var currencyResponse CurrencyData
 	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetCurrencies/v1?key=%s", apiKey))
 	if err != nil {
-		log.Println(err)
 		return currencyResponse, err
 	}
 	defer func(Body io.ReadCloser) {

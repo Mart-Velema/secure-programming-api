@@ -201,52 +201,38 @@ type CurrencyData struct {
 }
 
 type CurrencyDataCache struct {
-	CachedOn   time.Time `json:"cachedOn"`
-	Currencies map[currencyItems]struct {
-		CurrencyUsd   float64 `json:"usd"`
-		CurrencyMetal float64 `json:"metal"`
-		CurrencyKey   float64 `json:"keys"`
-	} `json:"currencies"`
+	CachedOn   time.Time                  `json:"cachedOn"`
+	Currencies map[currencyItems]Currency `json:"currencies"`
+}
+
+type Currency struct {
+	CurrencyUsd   float64 `json:"usd"`
+	CurrencyMetal float64 `json:"metal"`
+	CurrencyKey   float64 `json:"keys"`
 }
 
 func (c *CurrencyData) toCache() *CurrencyDataCache {
 	var currencyCache = &CurrencyDataCache{
-		CachedOn: time.Now(),
-		Currencies: map[currencyItems]struct {
-			CurrencyUsd   float64 `json:"usd"`
-			CurrencyMetal float64 `json:"metal"`
-			CurrencyKey   float64 `json:"keys"`
-		}{},
+		CachedOn:   time.Now(),
+		Currencies: map[currencyItems]Currency{},
 	}
 
 	metalValue := c.Response.Currencies[CurrencyMetal].Price
 	keyValue := c.Response.Currencies[CurrencyKey].Price
 
-	currencyCache.Currencies[CurrencyUsd] = struct {
-		CurrencyUsd   float64 `json:"usd"`
-		CurrencyMetal float64 `json:"metal"`
-		CurrencyKey   float64 `json:"keys"`
-	}{
+	currencyCache.Currencies[CurrencyUsd] = Currency{
 		CurrencyUsd:   1.0,
 		CurrencyMetal: 1.0 / metalValue.Value,
 		CurrencyKey:   (1.0 / metalValue.Value) / keyValue.Value,
 	}
 
-	currencyCache.Currencies[CurrencyMetal] = struct {
-		CurrencyUsd   float64 `json:"usd"`
-		CurrencyMetal float64 `json:"metal"`
-		CurrencyKey   float64 `json:"keys"`
-	}{
+	currencyCache.Currencies[CurrencyMetal] = Currency{
 		CurrencyUsd:   metalValue.Value,
 		CurrencyMetal: 1.0,
 		CurrencyKey:   1.0 / keyValue.Value,
 	}
 
-	currencyCache.Currencies[CurrencyKey] = struct {
-		CurrencyUsd   float64 `json:"usd"`
-		CurrencyMetal float64 `json:"metal"`
-		CurrencyKey   float64 `json:"keys"`
-	}{
+	currencyCache.Currencies[CurrencyKey] = Currency{
 		CurrencyUsd:   keyValue.Value * metalValue.Value,
 		CurrencyMetal: keyValue.Value,
 		CurrencyKey:   1.0,
