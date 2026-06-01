@@ -2,3 +2,5 @@ data
 .env
 .idea
 guineatrade.db
+steam-bot/node_modules
+steam-bot/package-lock.json

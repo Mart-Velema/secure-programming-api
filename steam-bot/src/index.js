@@ -1,0 +1,26 @@
+const express = require("express");
+require("dotenv").config();
+
+const app = express();
+
+app.use(express.json());
+
+const PORT = process.env.BOT_PORT || 3001;
+
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    service: "steam-bot",
+    port: PORT
+  });
+});
+
+app.get("/config", (req, res) => {
+  res.json({
+    steamConfigured: !!process.env.STEAM_USERNAME
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`Steam bot service running on port ${PORT}`);
+});
