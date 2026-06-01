@@ -1,6 +1,7 @@
 package backpack
 
 import (
+	"errors"
 	"log"
 	"strconv"
 	"time"
@@ -79,6 +80,26 @@ type ItemPair struct {
 	Uncraftable map[int]Item `json:"non-craftable,omitempty"`
 }
 
+func (ip *ItemPair) addItem(key int, valueData any, isCraftable bool) error {
+	valueMap, ok := valueData.(map[string]any)
+	if !ok {
+		return errors.New("input data is not a valid item")
+	}
+
+	item := Item{
+		Currency: currencyItems(valueMap["currency"].(string)),
+		Value:    valueMap["value"].(float64),
+	}
+
+	if isCraftable {
+		ip.Craftable[key] = item
+	} else {
+		ip.Uncraftable[key] = item
+	}
+
+	return nil
+}
+
 type Item struct {
 	Value    float64       `json:"value"`
 	Currency currencyItems `json:"currency"`
@@ -95,83 +116,76 @@ func (pd *pricingData) toCache() (*PricingDataCache, error) {
 		if !ok {
 			continue
 		}
+		prices, ok := itemMap["prices"].(map[string]any)
+		if !ok {
+			continue
+		}
 
 		cacheItem := ItemDetails{
 			Prices: make(map[qualityItems]ItemPair),
 		}
-
-		if prices, ok := itemMap["prices"].(map[string]any); ok {
-			for qualityStr, qualityData := range prices {
-				quality, ok := qualityMap[qualityStr]
-				if !ok {
-					continue
-				}
-
-				qualityMapData, ok := qualityData.(map[string]any)
-				if !ok {
-					continue
-				}
-
-				qualityEntry := ItemPair{
-					Craftable:   make(map[int]Item),
-					Uncraftable: make(map[int]Item),
-				}
-
-				if tradableData, ok := qualityMapData["Tradable"].(map[string]any); ok {
-					for _, craftableKey := range []string{"Craftable", "Non-Craftable"} {
-						if _, keyExists := tradableData[craftableKey]; !keyExists {
-							continue
-						}
-						if craftableData, ok := tradableData[craftableKey].(map[string]any); ok {
-							for key, valueData := range craftableData {
-								keyInt, err := strconv.Atoi(key)
-								if err != nil {
-									keyInt = 0
-								}
-
-								valueMap, ok := valueData.(map[string]any)
-								if !ok {
-									continue
-								}
-
-								item := Item{
-									Currency: currencyItems(valueMap["currency"].(string)),
-									Value:    valueMap["value"].(float64),
-								}
-
-								if craftableKey == "Craftable" {
-									qualityEntry.Craftable[keyInt] = item
-								} else {
-									qualityEntry.Uncraftable[keyInt] = item
-								}
-							}
-						} else if singleCraftableData, ok := tradableData[craftableKey].([]any); ok {
-							valueMap, exists := singleCraftableData[0].(map[string]any)
-							if !exists {
-								continue
-							}
-							item := Item{
-								Currency: currencyItems(valueMap["currency"].(string)),
-								Value:    valueMap["value"].(float64),
-							}
-
-							if craftableKey == "Craftable" {
-								qualityEntry.Craftable[0] = item
-							} else {
-								qualityEntry.Uncraftable[0] = item
-							}
-						} else {
-							log.Printf("Unprocessable: %s: %s", craftableKey, itemName)
-						}
-					}
-				}
-				cacheItem.Prices[quality] = qualityEntry
+		for qualityStr, qualityData := range prices {
+			quality, ok := qualityMap[qualityStr]
+			if !ok {
+				continue
 			}
+
+			qualityMapData, ok := qualityData.(map[string]any)
+			if !ok {
+				continue
+			}
+
+			itemPair, err := createItemPair(qualityMapData)
+			if err != nil {
+				log.Printf("%s: %s", err, itemName)
+				continue
+			}
+
+			cacheItem.Prices[quality] = itemPair
 		}
 		cache.Items[itemName] = cacheItem
 	}
 
 	return cache, nil
+}
+
+func createItemPair(qualityMapData map[string]any) (ItemPair, error) {
+	itemPair := ItemPair{
+		Craftable:   make(map[int]Item),
+		Uncraftable: make(map[int]Item),
+	}
+
+	tradableData, ok := qualityMapData["Tradable"].(map[string]any)
+	if !ok {
+		return itemPair, errors.New("no Tradable key found")
+	}
+
+	for _, craftableKey := range []string{"Craftable", "Non-Craftable"} {
+		if _, keyExists := tradableData[craftableKey]; !keyExists {
+			continue
+		}
+		if craftableData, ok := tradableData[craftableKey].(map[string]any); ok {
+			for key, valueData := range craftableData {
+				keyInt, err := strconv.Atoi(key)
+				if err != nil {
+					keyInt = 0
+				}
+				err = itemPair.addItem(keyInt, valueData, craftableKey == "Craftable")
+				if err != nil {
+					return ItemPair{}, err
+				}
+			}
+		} else if singleCraftableData, ok := tradableData[craftableKey].([]any); ok {
+			err := itemPair.addItem(0, singleCraftableData[0], craftableKey == "Craftable")
+			if err != nil {
+				return ItemPair{}, err
+			}
+		} else {
+			return itemPair, errors.New("not a valid item")
+		}
+	}
+
+	return itemPair, nil
 }
 
 type currencyData struct {
