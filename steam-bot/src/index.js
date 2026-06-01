@@ -1,7 +1,7 @@
 const express = require("express");
 require("dotenv").config();
 
-const { getSteamClientStatus } = require("./steamClient");
+const { getSteamClientStatus, loginToSteam } = require("./steamClient");
 
 const app = express();
 
@@ -29,4 +29,12 @@ app.get("/steam/status", (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Steam bot service running on port ${PORT}`);
+});
+
+app.post("/steam/login", (req, res) => {
+  const { authCode } = req.body;
+
+  const result = loginToSteam(authCode);
+
+  res.json(result);
 });
