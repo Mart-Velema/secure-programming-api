@@ -82,12 +82,12 @@ func init() {
 	}()
 }
 
-func getPrice() (PricingData, error) {
+func getPrice() (*PricingData, error) {
 	//  TODO: Use proper remote URL instead of local testing URL
 	var pricingResponse PricingData
 	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetPrices/v4?key=%s", apiKey))
 	if err != nil {
-		return pricingResponse, err
+		return &pricingResponse, err
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
@@ -97,7 +97,7 @@ func getPrice() (PricingData, error) {
 	}(response.Body)
 
 	if response.StatusCode != 200 {
-		return pricingResponse, errors.New(fmt.Sprintf("unable to get current pricing: %d", response.StatusCode))
+		return &pricingResponse, errors.New(fmt.Sprintf("unable to get current pricing: %d", response.StatusCode))
 	}
 
 	decoder := json.NewDecoder(response.Body)
@@ -107,19 +107,19 @@ func getPrice() (PricingData, error) {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return pricingResponse, err
+			return &pricingResponse, err
 		}
 	}
 
-	return pricingResponse, nil
+	return &pricingResponse, nil
 }
 
-func getCurrency() (CurrencyData, error) {
+func getCurrency() (*CurrencyData, error) {
 	//  TODO: Use proper remote URL instead of local testing URL
 	var currencyResponse CurrencyData
 	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetCurrencies/v1?key=%s", apiKey))
 	if err != nil {
-		return currencyResponse, err
+		return &currencyResponse, err
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
@@ -129,7 +129,7 @@ func getCurrency() (CurrencyData, error) {
 	}(response.Body)
 
 	if response.StatusCode != 200 {
-		return currencyResponse, errors.New(fmt.Sprintf("unable to get current currency conversions: %d", response.StatusCode))
+		return &currencyResponse, errors.New(fmt.Sprintf("unable to get current currency conversions: %d", response.StatusCode))
 	}
 
 	decoder := json.NewDecoder(response.Body)
@@ -139,11 +139,11 @@ func getCurrency() (CurrencyData, error) {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return currencyResponse, err
+			return &currencyResponse, err
 		}
 	}
 
-	return currencyResponse, nil
+	return &currencyResponse, nil
 }
 
 func updatePriceCache() {
