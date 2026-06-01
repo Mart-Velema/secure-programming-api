@@ -77,6 +77,34 @@ The database can also be seeded with random values. You can enable seeding by pa
 
 _note_: Seeding the database permanently and destructively deletes the entire database. Really, it literally deletes the file permanently.
 
+### Middlewares
+
+There are two different middleware suites available: JWT and TOTP.
+
+#### JWT
+
+JSON Web Token is used for basic authentication and verifying that a user is nog a web crawler. JWT's are send and checked using the Authorization HTTP header. Each user gets a unique JWT, and are valid for only a few minutes.
+With `middleware.ExtractTokenUser()`, you can get the User from the current context.
+
+```http request
+GET /api/v1/auth/me HTTP/1.1
+Authorization: Bearer <JWT>
+```
+
+#### TOTP
+
+Time based One TIme Passwords are 6 digit codes that are valid for 30 seconds. TOTP should be used for sensitive transactions which could cost us or the user money.
+The user may send a recovery code in certain contexes to reset the TOTP. 
+
+_the recovery code should never be used for verification_
+
+```http request
+POST /api/v1/auth/mfa/totp/reset HTTP/1.1
+Authorization: Bearer <JWT>
+X-TOTP-Token: <TOTP>
+X-Recovery-Code: <Recovery>
+```
+
 ## Server Hosting
 
 The API has a docker setup included. It can be run using the docker-compose tool:
