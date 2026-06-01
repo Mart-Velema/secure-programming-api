@@ -54,7 +54,7 @@ var qualityMap = map[string]qualityItems{
 	"15": Decorated,
 }
 
-type PricingData struct {
+type pricingData struct {
 	Response struct {
 		Success          int64          `json:"success,omitempty"`
 		CurrentTime      int64          `json:"current_time,omitempty"`
@@ -66,13 +66,17 @@ type PricingData struct {
 }
 
 type PricingDataCache struct {
-	CachedOn time.Time `json:"cachedOn"`
-	Items    map[string]struct {
-		Prices map[qualityItems]struct {
-			Craftable   map[int]Item `json:"craftable,omitempty"`
-			Uncraftable map[int]Item `json:"non-craftable,omitempty"`
-		} `json:"prices"`
-	} `json:"items"`
+	CachedOn time.Time              `json:"cachedOn"`
+	Items    map[string]ItemDetails `json:"items"`
+}
+
+type ItemDetails struct {
+	Prices map[qualityItems]ItemPair `json:"prices"`
+}
+
+type ItemPair struct {
+	Craftable   map[int]Item `json:"craftable,omitempty"`
+	Uncraftable map[int]Item `json:"non-craftable,omitempty"`
 }
 
 type Item struct {
@@ -80,15 +84,10 @@ type Item struct {
 	Currency currencyItems `json:"currency"`
 }
 
-func (pd *PricingData) toCache() (*PricingDataCache, error) {
+func (pd *pricingData) toCache() (*PricingDataCache, error) {
 	cache := &PricingDataCache{
 		CachedOn: time.Now(),
-		Items: make(map[string]struct {
-			Prices map[qualityItems]struct {
-				Craftable   map[int]Item `json:"craftable,omitempty"`
-				Uncraftable map[int]Item `json:"non-craftable,omitempty"`
-			} `json:"prices"`
-		}),
+		Items:    make(map[string]ItemDetails),
 	}
 
 	for itemName, itemData := range pd.Response.Items {
@@ -97,16 +96,8 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 			continue
 		}
 
-		cacheItem := struct {
-			Prices map[qualityItems]struct {
-				Craftable   map[int]Item `json:"craftable,omitempty"`
-				Uncraftable map[int]Item `json:"non-craftable,omitempty"`
-			} `json:"prices"`
-		}{
-			Prices: make(map[qualityItems]struct {
-				Craftable   map[int]Item `json:"craftable,omitempty"`
-				Uncraftable map[int]Item `json:"non-craftable,omitempty"`
-			}),
+		cacheItem := ItemDetails{
+			Prices: make(map[qualityItems]ItemPair),
 		}
 
 		if prices, ok := itemMap["prices"].(map[string]any); ok {
@@ -121,17 +112,13 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 					continue
 				}
 
-				qualityEntry := struct {
-					Craftable   map[int]Item `json:"craftable,omitempty"`
-					Uncraftable map[int]Item `json:"non-craftable,omitempty"`
-				}{
+				qualityEntry := ItemPair{
 					Craftable:   make(map[int]Item),
 					Uncraftable: make(map[int]Item),
 				}
 
-				// Process Tradable and Non-Tradable
 				if tradableData, ok := qualityMapData["Tradable"].(map[string]any); ok {
-					for _, craftableKey := range []string{"Craftable", "Non-craftable"} {
+					for _, craftableKey := range []string{"Craftable", "Non-Craftable"} {
 						if _, keyExists := tradableData[craftableKey]; !keyExists {
 							continue
 						}
@@ -187,7 +174,7 @@ func (pd *PricingData) toCache() (*PricingDataCache, error) {
 	return cache, nil
 }
 
-type CurrencyData struct {
+type currencyData struct {
 	Response struct {
 		Success    int64 `json:"success,omitempty"`
 		Currencies map[currencyItems]struct {
@@ -211,7 +198,7 @@ type Currency struct {
 	CurrencyKey   float64 `json:"keys"`
 }
 
-func (c *CurrencyData) toCache() *CurrencyDataCache {
+func (c *currencyData) toCache() *CurrencyDataCache {
 	var currencyCache = &CurrencyDataCache{
 		CachedOn:   time.Now(),
 		Currencies: map[currencyItems]Currency{},

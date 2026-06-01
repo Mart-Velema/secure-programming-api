@@ -82,9 +82,9 @@ func init() {
 	}()
 }
 
-func getPrice() (*PricingData, error) {
+func getPrice() (*pricingData, error) {
 	//  TODO: Use proper remote URL instead of local testing URL
-	var pricingResponse PricingData
+	var pricingResponse pricingData
 	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetPrices/v4?key=%s", apiKey))
 	if err != nil {
 		return &pricingResponse, err
@@ -114,9 +114,9 @@ func getPrice() (*PricingData, error) {
 	return &pricingResponse, nil
 }
 
-func getCurrency() (*CurrencyData, error) {
+func getCurrency() (*currencyData, error) {
 	//  TODO: Use proper remote URL instead of local testing URL
-	var currencyResponse CurrencyData
+	var currencyResponse currencyData
 	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetCurrencies/v1?key=%s", apiKey))
 	if err != nil {
 		return &currencyResponse, err
