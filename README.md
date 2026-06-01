@@ -50,13 +50,15 @@ PORT="3000" # The port to run the API on
 
 # Database
 ENCRYPTION_KEY="Fy2mcmCCOS6LsLRpkoeJSFCNVaixHN9oLEdoU+6lu2A=" # A Base64 encoded 32 byte sequence used as the master key to encrypting and decrypting the database entries
-ENCRYPTION_PASSCODE="My Super Secure Password!" # A Generic any-length string that will be used as the master password. Overrides the value of ENCRYPTION_KEY
 SQLITE_FILE_LOCATION="./guineatrade.db" # The filepath where the SQLite3 database file is located
 
 # JWT
 JWT_SECRET_KEY="superlongkey" # A long string of random data to act as the signing key for JWT. Recommended to have at least 64 characters or more
-JWT_TIMEOUT_HOURS=3 # Time a JWT is valid in minutes
+JWT_TIMEOUT_MINUTES=3 # Time a JWT is valid in minutes
 JWT_REFRESH_DAYS=7 # Time the refresh token is valid in days
+
+# Backpack.tf
+BACKPACK_API_KEY="12345678901234567890abcd" # The Backpack.TF API key
 
 ```
 
