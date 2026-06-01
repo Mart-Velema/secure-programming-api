@@ -1,6 +1,8 @@
 const express = require("express");
 require("dotenv").config();
 
+const { getSteamClientStatus } = require("./steamClient");
+
 const app = express();
 
 app.use(express.json());
@@ -11,14 +13,18 @@ app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     service: "steam-bot",
-    port: PORT
+    port: PORT,
   });
 });
 
 app.get("/config", (req, res) => {
   res.json({
-    steamConfigured: !!process.env.STEAM_USERNAME
+    steamConfigured: !!process.env.STEAM_USERNAME,
   });
+});
+
+app.get("/steam/status", (req, res) => {
+  res.json(getSteamClientStatus());
 });
 
 app.listen(PORT, () => {
