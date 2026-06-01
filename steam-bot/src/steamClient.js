@@ -1,6 +1,16 @@
 const SteamUser = require("steam-user");
 
 const client = new SteamUser();
+const SteamCommunity = require("steamcommunity");
+const TradeOfferManager = require("steam-tradeoffer-manager");
+
+const community = new SteamCommunity();
+
+const manager = new TradeOfferManager({
+  steam: client,
+  community: community,
+  language: "en",
+});
 
 let lastError = null;
 let isLoggingIn = false;
@@ -9,6 +19,22 @@ client.on("loggedOn", () => {
   console.log("Steam bot logged in successfully");
   lastError = null;
   isLoggingIn = false;
+  client.setPersona(SteamUser.EPersonaState.Online);
+});
+
+client.on("webSession", (sessionID, cookies) => {
+  console.log("Steam web session established");
+
+  community.setCookies(cookies);
+
+  manager.setCookies(cookies, (err) => {
+    if (err) {
+      console.error("Failed to set manager cookies:", err);
+      return;
+    }
+
+    console.log("Trade manager ready");
+  });
 });
 
 client.on("error", (err) => {
@@ -84,8 +110,35 @@ function loginToSteam(authCode) {
   };
 }
 
+function getBotInventory(appId = 440, contextId = 2) {
+  return new Promise((resolve, reject) => {
+    manager.getInventoryContents(
+      appId,
+      contextId,
+      true,
+      (err, inventory) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        resolve(
+          inventory.map((item) => ({
+            assetId: item.assetid,
+            marketHashName: item.market_hash_name,
+            name: item.name,
+            tradable: item.tradable,
+            marketable: item.marketable,
+          }))
+        );
+      }
+    );
+  });
+}
+
 module.exports = {
   client,
   getSteamClientStatus,
   loginToSteam,
+  getBotInventory,
 };

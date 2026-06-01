@@ -1,7 +1,11 @@
 const express = require("express");
 require("dotenv").config();
 
-const { getSteamClientStatus, loginToSteam } = require("./steamClient");
+const {
+  getSteamClientStatus,
+  loginToSteam,
+  getBotInventory,
+} = require("./steamClient");
 
 const app = express();
 
@@ -37,4 +41,24 @@ app.post("/steam/login", (req, res) => {
   const result = loginToSteam(authCode);
 
   res.json(result);
+});
+
+app.get("/steam/inventory", async (req, res) => {
+  try {
+    const appId = Number(req.query.appId || 440);
+    const contextId = Number(req.query.contextId || 2);
+
+    const inventory = await getBotInventory(appId, contextId);
+
+    res.json({
+      appId,
+      contextId,
+      count: inventory.length,
+      inventory,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+    });
+  }
 });
