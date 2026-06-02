@@ -226,11 +226,11 @@ Implemented:
 * Active trade offer listing
 * Trade offer history
 * Internal API authentication
+* Automatic Steam Guard login (`STEAM_SHARED_SECRET`) (optional)
+* Automatic trade confirmations (`STEAM_IDENTITY_SECRET`) (optional)
 
 Not yet implemented:
 
-* Automatic Steam Guard login (`STEAM_SHARED_SECRET`)
-* Automatic trade confirmations (`STEAM_IDENTITY_SECRET`)
 * Trade status polling
 * Event notifications/webhooks
 * Integration with Go API

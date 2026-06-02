@@ -27,6 +27,15 @@ client.on("webSession", (sessionID, cookies) => {
 
   community.setCookies(cookies);
 
+  if (process.env.STEAM_IDENTITY_SECRET) {
+  community.startConfirmationChecker(
+    10000,
+    process.env.STEAM_IDENTITY_SECRET
+  );
+
+  console.log("Automatic trade confirmations enabled");
+  }
+
   manager.setCookies(cookies, (err) => {
     if (err) {
       console.error("Failed to set manager cookies:", err);
