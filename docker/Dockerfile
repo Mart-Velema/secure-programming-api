@@ -11,4 +11,5 @@ FROM golang:1.26.3-trixie AS runtime-stage
 WORKDIR /
 COPY --from=constructor /app/gt /gt
 COPY .env /.env
+COPY item-icons.json /item-icons.json
 ENTRYPOINT ["/gt"]
