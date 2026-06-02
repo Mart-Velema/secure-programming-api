@@ -29,7 +29,7 @@ jobs:
       - name: installing go packages
         uses: actions/setup-go@v6
         with:
-          go-version: '1.26.2'
+          go-version: '1.26.3'
           cache: false
       - name: Run go tests
         run: go test ./...

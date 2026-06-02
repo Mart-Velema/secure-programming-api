@@ -62,7 +62,7 @@ func init() {
 	defer func(conn *tls.Conn) {
 		err := conn.Close()
 		if err != nil {
-
+			log.Fatal(err)
 		}
 	}(conn)
 
