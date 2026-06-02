@@ -79,3 +79,40 @@ app.post("/steam/trade-url/validate", (req, res) => {
 
   res.status(result.valid ? 200 : 400).json(result);
 });
+
+app.post("/steam/trade-offers/dry-run", (req, res) => {
+  const { tradeUrl, items } = req.body;
+
+  if (!tradeUrl) {
+    return res.status(400).json({
+      ok: false,
+      error: "tradeUrl is required",
+    });
+  }
+
+  const tradeUrlResult = parseTradeUrl(tradeUrl);
+
+  if (!tradeUrlResult.valid) {
+    return res.status(400).json({
+      ok: false,
+      error: tradeUrlResult.error,
+    });
+  }
+
+  const steamStatus = getSteamClientStatus();
+
+  if (!steamStatus.loggedOn) {
+    return res.status(400).json({
+      ok: false,
+      error: "Steam bot is not logged in",
+    });
+  }
+
+  res.json({
+    ok: true,
+    message: "Dry run successful. No trade was sent.",
+    partner: tradeUrlResult.partner,
+    token: tradeUrlResult.token,
+    itemCount: Array.isArray(items) ? items.length : 0,
+  });
+});
