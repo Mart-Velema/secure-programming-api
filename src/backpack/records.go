@@ -86,6 +86,10 @@ func (ip *ItemPair) addItem(key int, valueData any, isCraftable bool) error {
 		return errors.New("input data is not a valid item")
 	}
 
+	if valueMap["currency"] == nil || valueMap["value"] == nil {
+		return errors.New("input data does not contain value or currency fields")
+	}
+
 	item := Item{
 		Currency: currencyItems(valueMap["currency"].(string)),
 		Value:    valueMap["value"].(float64),
@@ -143,7 +147,9 @@ func (pd *pricingData) toCache() (*PricingDataCache, error) {
 
 			cacheItem.Prices[quality] = itemPair
 		}
-		cache.Items[itemName] = cacheItem
+		if len(cacheItem.Prices) != 0 {
+			cache.Items[itemName] = cacheItem
+		}
 	}
 
 	return cache, nil

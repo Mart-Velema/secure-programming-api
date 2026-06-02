@@ -15,9 +15,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var apiKey string
-var PricingCache PricingDataCache
-var CurrencyCache CurrencyDataCache
+const backpackBaseUrl = "https://backpack.tf/api"
+
+var (
+	apiKey        string
+	PricingCache  PricingDataCache
+	CurrencyCache CurrencyDataCache
+)
 
 var client = http.Client{
 	Transport: &http.Transport{
@@ -25,7 +29,7 @@ var client = http.Client{
 		MaxConnsPerHost: 10,
 		IdleConnTimeout: 30 * time.Second,
 		TLSClientConfig: &tls.Config{
-			ServerName:         "backpac.tf",
+			ServerName:         "backpack.tf",
 			InsecureSkipVerify: false,
 		},
 	},
@@ -85,7 +89,7 @@ func init() {
 func getPrice() (*pricingData, error) {
 	//  TODO: Use proper remote URL instead of local testing URL
 	var pricingResponse pricingData
-	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetPrices/v4?key=%s", apiKey))
+	response, err := client.Get(fmt.Sprintf("%s/IGetPrices/v4?key=%s", backpackBaseUrl, apiKey))
 	if err != nil {
 		return &pricingResponse, err
 	}
@@ -117,7 +121,7 @@ func getPrice() (*pricingData, error) {
 func getCurrency() (*currencyData, error) {
 	//  TODO: Use proper remote URL instead of local testing URL
 	var currencyResponse currencyData
-	response, err := client.Get(fmt.Sprintf("http://localhost:8080/api/IGetCurrencies/v1?key=%s", apiKey))
+	response, err := client.Get(fmt.Sprintf("%s/IGetCurrencies/v1?key=%s", backpackBaseUrl, apiKey))
 	if err != nil {
 		return &currencyResponse, err
 	}
