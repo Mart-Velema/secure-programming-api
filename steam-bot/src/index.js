@@ -5,6 +5,7 @@ const {
   getSteamClientStatus,
   loginToSteam,
   getBotInventory,
+  sendTradeOffer,
 } = require("./steamClient");
 
 const { parseTradeUrl } = require("./tradeUrl");
@@ -115,4 +116,49 @@ app.post("/steam/trade-offers/dry-run", (req, res) => {
     token: tradeUrlResult.token,
     itemCount: Array.isArray(items) ? items.length : 0,
   });
+});
+
+app.post("/steam/trade-offers", async (req, res) => {
+  try {
+    const { tradeUrl, itemsToGive, message } = req.body;
+
+    if (!tradeUrl) {
+      return res.status(400).json({
+        ok: false,
+        error: "tradeUrl is required",
+      });
+    }
+
+    const tradeUrlResult = parseTradeUrl(tradeUrl);
+
+    if (!tradeUrlResult.valid) {
+      return res.status(400).json({
+        ok: false,
+        error: tradeUrlResult.error,
+      });
+    }
+
+    if (!Array.isArray(itemsToGive) || itemsToGive.length === 0) {
+      return res.status(400).json({
+        ok: false,
+        error: "itemsToGive must contain at least one item",
+      });
+    }
+
+    const result = await sendTradeOffer(
+      tradeUrl,
+      itemsToGive,
+      message || "GuineaTrade test offer"
+    );
+
+    res.json({
+      ok: true,
+      ...result,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
 });
