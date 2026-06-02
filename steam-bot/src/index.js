@@ -7,6 +7,8 @@ const {
   getBotInventory,
 } = require("./steamClient");
 
+const { parseTradeUrl } = require("./tradeUrl");
+
 const app = express();
 
 app.use(express.json());
@@ -61,4 +63,19 @@ app.get("/steam/inventory", async (req, res) => {
       error: error.message,
     });
   }
+});
+
+app.post("/steam/trade-url/validate", (req, res) => {
+  const { tradeUrl } = req.body;
+
+  if (!tradeUrl) {
+    return res.status(400).json({
+      valid: false,
+      error: "tradeUrl is required",
+    });
+  }
+
+  const result = parseTradeUrl(tradeUrl);
+
+  res.status(result.valid ? 200 : 400).json(result);
 });
