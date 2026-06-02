@@ -2,8 +2,9 @@
 
 Steam trading bot service for GuineaTrade.
 
-# IMPORTANT!!!
-The steam bot is its own account, make sure you have the correct credentials before continuing
+# IMPORTANT
+
+The Steam bot uses its own Steam account. Make sure you are using the correct Steam account credentials before continuing.
 
 ## Features
 
@@ -15,7 +16,16 @@ Currently implemented:
 * Steam web session creation
 * TradeOfferManager integration
 * Inventory retrieval
-* Status endpoints
+* Trade URL validation
+* Create trade offers
+* Accept incoming trade offers
+* Cancel outgoing trade offers
+* View trade offer details
+* List active trade offers
+* View trade offer history
+* Internal API key protection
+
+---
 
 ## Installation
 
@@ -24,6 +34,8 @@ Install dependencies:
 ```bash
 npm install
 ```
+
+---
 
 ## Configuration
 
@@ -36,6 +48,8 @@ STEAM_USERNAME=
 STEAM_PASSWORD=
 STEAM_SHARED_SECRET=
 STEAM_IDENTITY_SECRET=
+
+BOT_API_KEY=
 ```
 
 ### Environment Variables
@@ -47,6 +61,9 @@ STEAM_IDENTITY_SECRET=
 | `STEAM_PASSWORD`        | Steam bot account password                                   |
 | `STEAM_SHARED_SECRET`   | Used for automatic Steam Guard codes (not yet implemented)   |
 | `STEAM_IDENTITY_SECRET` | Used for automatic trade confirmations (not yet implemented) |
+| `BOT_API_KEY`           | Internal API key required for protected endpoints            |
+
+---
 
 ## Starting the Bot
 
@@ -62,22 +79,46 @@ Expected output:
 Steam bot service running on port 3001
 ```
 
+---
+
+## Authentication
+
+All endpoints except `/health` require the API key.
+
+Example header:
+
+```http
+X-API-Key: your-secret-api-key
+```
+
+### PowerShell Example
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://localhost:3001/steam/status" `
+  -Headers @{ "X-API-Key" = "your-secret-api-key" }
+```
+
+---
+
 ## Login
 
 Send a login request:
 
-### Example: PowerShell
-
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:3001/steam/login" `
--Method Post `
--ContentType "application/json" `
--Body "{}"
+Invoke-RestMethod `
+  -Uri "http://localhost:3001/steam/login" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Headers @{ "X-API-Key" = "your-secret-api-key" } `
+  -Body "{}"
 ```
 
 ### Steam Guard
 
-Steam Guard is enabled, enter the code from the Steam Mobile App when prompted.
+Steam Guard is enabled on the bot account.
+
+When prompted in the console, enter the Steam Guard code from the Steam Mobile App.
 
 Successful login:
 
@@ -87,12 +128,14 @@ Steam web session established
 Trade manager ready
 ```
 
+---
+
 ## Verify Status
 
-Open:
-
-```txt
-http://localhost:3001/steam/status
+```powershell
+Invoke-RestMethod `
+  -Uri "http://localhost:3001/steam/status" `
+  -Headers @{ "X-API-Key" = "your-secret-api-key" }
 ```
 
 Expected response:
@@ -103,52 +146,69 @@ Expected response:
 }
 ```
 
+---
+
 ## Inventory
 
-Open:
+Example:
 
 ```txt
-http://localhost:3001/steam/inventory
+GET /steam/inventory?appId=730&contextId=2
 ```
 
-Default values:
+### Common App IDs
 
 | Game             | App ID | Context ID |
 | ---------------- | ------ | ---------- |
 | Team Fortress 2  | 440    | 2          |
 | Counter-Strike 2 | 730    | 2          |
 
+---
+
 ## Available Endpoints
 
-### Health Check
+### Public
 
-```http
-GET /health
+| Method | Endpoint  | Description  |
+| ------ | --------- | ------------ |
+| GET    | `/health` | Health check |
+
+### Protected
+
+| Method | Endpoint                                   | Description                            |
+| ------ | ------------------------------------------ | -------------------------------------- |
+| GET    | `/config`                                  | Configuration status                   |
+| GET    | `/steam/status`                            | Steam client status                    |
+| POST   | `/steam/login`                             | Login to Steam                         |
+| GET    | `/steam/inventory`                         | Retrieve inventory                     |
+| POST   | `/steam/trade-url/validate`                | Validate trade URL                     |
+| POST   | `/steam/trade-offers/dry-run`              | Validate trade request without sending |
+| POST   | `/steam/trade-offers`                      | Create and send trade offer            |
+| GET    | `/steam/trade-offers`                      | List active trade offers               |
+| GET    | `/steam/trade-offers/history`              | List historical trade offers           |
+| GET    | `/steam/trade-offers/:tradeOfferId`        | Retrieve trade offer details           |
+| POST   | `/steam/trade-offers/:tradeOfferId/cancel` | Cancel outgoing trade offer            |
+| POST   | `/steam/trade-offers/:tradeOfferId/accept` | Accept incoming trade offer            |
+
+---
+
+## Trade Offer Request Example
+
+```json
+{
+  "tradeUrl": "https://steamcommunity.com/tradeoffer/new/?partner=123456789&token=abcdef",
+  "itemsToGive": [
+    {
+      "appId": 730,
+      "contextId": 2,
+      "assetId": "20540621909"
+    }
+  ],
+  "message": "GuineaTrade trade offer"
+}
 ```
 
-### Configuration Status
-
-```http
-GET /config
-```
-
-### Steam Status
-
-```http
-GET /steam/status
-```
-
-### Steam Login
-
-```http
-POST /steam/login
-```
-
-### Bot Inventory
-
-```http
-GET /steam/inventory
-```
+---
 
 ## Current Status
 
@@ -156,15 +216,23 @@ Implemented:
 
 * Steam authentication
 * Steam Guard login
-* Inventory retrieval
+* Steam inventory retrieval
 * TradeOfferManager setup
+* Trade URL validation
+* Send trade offers
+* Accept incoming trade offers
+* Cancel trade offers
+* View trade offer details
+* Active trade offer listing
+* Trade offer history
+* Internal API authentication
 
 Not yet implemented:
 
-* Automatic Steam Guard login (`shared_secret`)
-* Automatic trade confirmations (`identity_secret`)
-* Send trade offers
-* Accept trade offers
-* Cancel trade offers
-* Trade status monitoring
+* Automatic Steam Guard login (`STEAM_SHARED_SECRET`)
+* Automatic trade confirmations (`STEAM_IDENTITY_SECRET`)
+* Trade status polling
+* Event notifications/webhooks
 * Integration with Go API
+* Persistent trade storage
+* Order synchronization
