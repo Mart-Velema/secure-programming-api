@@ -6,6 +6,7 @@ const { getSteamClientStatus } = require("../services/steamClient");
 const {
   sendTradeOffer,
   getTradeOffer,
+  cancelTradeOffer,
 } = require("../services/tradeService");
 
 const router = express.Router();
@@ -99,6 +100,22 @@ router.get("/:tradeOfferId", async (req, res) => {
     res.json({
       ok: true,
       offer,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+});
+
+router.post("/:tradeOfferId/cancel", async (req, res) => {
+  try {
+    const result = await cancelTradeOffer(req.params.tradeOfferId);
+
+    res.json({
+      ok: true,
+      ...result,
     });
   } catch (error) {
     res.status(500).json({

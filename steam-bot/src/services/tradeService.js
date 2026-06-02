@@ -73,7 +73,31 @@ function getTradeOffer(tradeOfferId) {
   });
 }
 
+function cancelTradeOffer(tradeOfferId) {
+  return new Promise((resolve, reject) => {
+    manager.getOffer(tradeOfferId, (err, offer) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      offer.cancel((cancelErr) => {
+        if (cancelErr) {
+          reject(cancelErr);
+          return;
+        }
+
+        resolve({
+          tradeOfferId: offer.id,
+          status: "canceled",
+        });
+      });
+    });
+  });
+}
+
 module.exports = {
   sendTradeOffer,
   getTradeOffer,
+  cancelTradeOffer,
 };
