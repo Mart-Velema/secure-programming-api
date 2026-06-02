@@ -81,13 +81,20 @@ func init() {
 		for {
 			updatePriceCache()
 			updateCurrencyCache()
-			time.Sleep(time.Hour * 24)
+			now := time.Now().Truncate(time.Hour)
+
+			timeTillMidnight := 6 - (now.Hour() % 6)
+			now = now.Add(time.Duration(timeTillMidnight) * time.Hour)
+
+			nextRefresh := now.Sub(time.Now())
+			log.Printf("Next pricing update: %s", now.String())
+
+			time.Sleep(nextRefresh)
 		}
 	}()
 }
 
 func getPrice() (*pricingData, error) {
-	//  TODO: Use proper remote URL instead of local testing URL
 	var pricingResponse pricingData
 	response, err := client.Get(fmt.Sprintf("%s/IGetPrices/v4?key=%s", backpackBaseUrl, apiKey))
 	if err != nil {
@@ -119,7 +126,6 @@ func getPrice() (*pricingData, error) {
 }
 
 func getCurrency() (*currencyData, error) {
-	//  TODO: Use proper remote URL instead of local testing URL
 	var currencyResponse currencyData
 	response, err := client.Get(fmt.Sprintf("%s/IGetCurrencies/v1?key=%s", backpackBaseUrl, apiKey))
 	if err != nil {
