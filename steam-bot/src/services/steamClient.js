@@ -1,6 +1,7 @@
 const SteamUser = require("steam-user");
 const SteamCommunity = require("steamcommunity");
 const TradeOfferManager = require("steam-tradeoffer-manager");
+const SteamTotp = require("steam-totp");
 
 const client = new SteamUser();
 const community = new SteamCommunity();
@@ -90,7 +91,11 @@ function loginToSteam(authCode) {
     password: process.env.STEAM_PASSWORD,
   };
 
-  if (authCode) {
+  if (process.env.STEAM_SHARED_SECRET) {
+  logOnOptions.twoFactorCode = SteamTotp.generateAuthCode(
+    process.env.STEAM_SHARED_SECRET
+  );
+  } else if (authCode) {
     logOnOptions.authCode = authCode;
   }
 
