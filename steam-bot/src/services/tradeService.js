@@ -156,10 +156,48 @@ function acceptTradeOffer(tradeOfferId) {
   });
 }
 
+function getTradeOfferHistory() {
+  return new Promise((resolve, reject) => {
+    manager.getOffers(
+      TradeOfferManager.EOfferFilter.All,
+      (err, sent, received) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        resolve({
+          sent: sent.map((offer) => ({
+            id: offer.id,
+            state: offer.state,
+            stateName: TradeOfferManager.ETradeOfferState[offer.state],
+            partner: offer.partner
+              ? offer.partner.getSteamID64()
+              : null,
+            created: offer.created,
+            updated: offer.updated,
+          })),
+          received: received.map((offer) => ({
+            id: offer.id,
+            state: offer.state,
+            stateName: TradeOfferManager.ETradeOfferState[offer.state],
+            partner: offer.partner
+              ? offer.partner.getSteamID64()
+              : null,
+            created: offer.created,
+            updated: offer.updated,
+          })),
+        });
+      }
+    );
+  });
+}
+
 module.exports = {
   sendTradeOffer,
   getTradeOffer,
   getTradeOffers,
+  getTradeOfferHistory,
   cancelTradeOffer,
   acceptTradeOffer,
 };

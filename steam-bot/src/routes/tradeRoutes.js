@@ -7,6 +7,7 @@ const {
   sendTradeOffer,
   getTradeOffer,
   getTradeOffers,
+  getTradeOfferHistory,
   cancelTradeOffer,
   acceptTradeOffer,
 } = require("../services/tradeService");
@@ -98,6 +99,22 @@ router.post("/", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const offers = await getTradeOffers();
+
+    res.json({
+      ok: true,
+      ...offers,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+});
+
+router.get("/history", async (req, res) => {
+  try {
+    const offers = await getTradeOfferHistory();
 
     res.json({
       ok: true,
