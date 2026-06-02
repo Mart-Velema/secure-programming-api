@@ -1,6 +1,6 @@
 services:
   server:
-    image: golang:1.26.2-trixie
+    image: golang:1.26.3-trixie
     build:
       context: .
       dockerfile: ./docker/Dockerfile

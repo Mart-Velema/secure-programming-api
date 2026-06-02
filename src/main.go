@@ -10,6 +10,7 @@ import (
 	"guineatrade.nhlstenden.com/src/auth"
 	"guineatrade.nhlstenden.com/src/auth/mfa"
 	"guineatrade.nhlstenden.com/src/auth/middleware"
+	"guineatrade.nhlstenden.com/src/backpack"
 	"guineatrade.nhlstenden.com/src/database"
 )
 
@@ -62,6 +63,12 @@ func main() {
 				multifactorAuthGroup.POST("/totp/verify", mfa.VerifyTOTP)
 				multifactorAuthGroup.DELETE("/totp/reset", mfa.ResetTOTP)
 			}
+		}
+		backpackGroup := apiRestricted.Group("/backpack")
+		{
+			backpackGroup.GET("/prices", backpack.GetPrices)
+			backpackGroup.GET("/prices/:item", backpack.GetItemDetails)
+			backpackGroup.GET("/currency", backpack.GetCurrencies)
 		}
 	}
 
