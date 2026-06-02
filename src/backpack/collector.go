@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -57,7 +56,15 @@ func init() {
 		RootCAs:    rootCAs,
 		ServerName: "backpack.tf",
 	})
-	defer conn.Close()
+	if conn == nil {
+		log.Fatal(err)
+	}
+	defer func(conn *tls.Conn) {
+		err := conn.Close()
+		if err != nil {
+
+		}
+	}(conn)
 
 	connState := conn.ConnectionState()
 	chain := connState.PeerCertificates
@@ -86,7 +93,7 @@ func init() {
 			timeTillMidnight := 6 - (now.Hour() % 6)
 			now = now.Add(time.Duration(timeTillMidnight) * time.Hour)
 
-			nextRefresh := now.Sub(time.Now())
+			nextRefresh := time.Until(now)
 			log.Printf("Next pricing update: %s", now.String())
 
 			time.Sleep(nextRefresh)
@@ -108,7 +115,7 @@ func getPrice() (*pricingData, error) {
 	}(response.Body)
 
 	if response.StatusCode != 200 {
-		return &pricingResponse, errors.New(fmt.Sprintf("unable to get current pricing: %d", response.StatusCode))
+		return &pricingResponse, fmt.Errorf("unable to get current pricing: %d", response.StatusCode)
 	}
 
 	decoder := json.NewDecoder(response.Body)
@@ -139,7 +146,7 @@ func getCurrency() (*currencyData, error) {
 	}(response.Body)
 
 	if response.StatusCode != 200 {
-		return &currencyResponse, errors.New(fmt.Sprintf("unable to get current currency conversions: %d", response.StatusCode))
+		return &currencyResponse, fmt.Errorf("unable to get current currency conversions: %d", response.StatusCode)
 	}
 
 	decoder := json.NewDecoder(response.Body)
