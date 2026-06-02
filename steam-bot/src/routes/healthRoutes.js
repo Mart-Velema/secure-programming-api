@@ -10,10 +10,4 @@ router.get("/health", (req, res) => {
   });
 });
 
-router.get("/config", (req, res) => {
-  res.json({
-    steamConfigured: !!process.env.STEAM_USERNAME,
-  });
-});
-
 module.exports = router;

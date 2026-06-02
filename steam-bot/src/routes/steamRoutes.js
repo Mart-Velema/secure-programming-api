@@ -9,6 +9,12 @@ const { getBotInventory } = require("../services/inventoryService");
 
 const router = express.Router();
 
+router.get("/config", (req, res) => {
+  res.json({
+    steamConfigured: !!process.env.STEAM_USERNAME,
+  });
+});
+
 router.get("/status", (req, res) => {
   res.json(getSteamClientStatus());
 });
