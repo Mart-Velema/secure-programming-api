@@ -7,6 +7,7 @@ const {
   sendTradeOffer,
   getTradeOffer,
   cancelTradeOffer,
+  getTradeOffers,
 } = require("../services/tradeService");
 
 const router = express.Router();
@@ -84,6 +85,22 @@ router.post("/", async (req, res) => {
     res.json({
       ok: true,
       ...result,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+});
+
+router.get("/", async (req, res) => {
+  try {
+    const offers = await getTradeOffers();
+
+    res.json({
+      ok: true,
+      ...offers,
     });
   } catch (error) {
     res.status(500).json({
