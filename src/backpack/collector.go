@@ -94,8 +94,8 @@ func init() {
 			updateCurrencyCache()
 			now := time.Now().Truncate(time.Hour)
 
-			timeTillMidnight := 6 - (now.Hour() % 6)
-			now = now.Add(time.Duration(timeTillMidnight) * time.Hour)
+			timeTillNextUpdate := 6 - (now.Hour() % 6)
+			now = now.Add(time.Duration(timeTillNextUpdate) * time.Hour)
 
 			nextRefresh := time.Until(now)
 			log.Printf("Next pricing update: %s", now.String())
