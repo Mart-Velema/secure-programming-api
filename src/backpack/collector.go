@@ -14,12 +14,15 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const backpackBaseUrl = "https://backpack.tf/api"
+const (
+	backpackBaseUrl = "https://backpack.tf/api"
+)
 
 var (
 	apiKey        string
 	PricingCache  PricingDataCache
 	CurrencyCache CurrencyDataCache
+	itemCache     map[string]string
 )
 
 var client = http.Client{
@@ -85,6 +88,7 @@ func init() {
 	}
 
 	go func() {
+		installItemCache()
 		for {
 			updatePriceCache()
 			updateCurrencyCache()
@@ -189,4 +193,19 @@ func updateCurrencyCache() {
 
 	CurrencyCache = *currencyCache
 	log.Printf("Updated Currency cache on %s", time.Now().String())
+}
+
+func installItemCache() {
+	content, err := os.ReadFile("./item-icons.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var items = make(map[string]string)
+	err = json.Unmarshal(content, &items)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	itemCache = items
 }

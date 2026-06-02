@@ -72,7 +72,8 @@ type PricingDataCache struct {
 }
 
 type ItemDetails struct {
-	Prices map[qualityItems]ItemPair `json:"prices"`
+	IconUrl string                    `json:"icon"`
+	Prices  map[qualityItems]ItemPair `json:"prices"`
 }
 
 type ItemPair struct {
@@ -125,8 +126,26 @@ func (pd *pricingData) toCache() (*PricingDataCache, error) {
 			continue
 		}
 
+		defindexes, ok := itemMap["defindex"].([]any)
+		if !ok || len(defindexes) == 0 {
+			log.Printf("Can't find defindex: %s", itemName)
+			continue
+		}
+		floatDefindex, ok := defindexes[0].(float64)
+		if !ok {
+			log.Printf("Can't decode defindex: %s", itemName)
+			continue
+		}
+		defindex := strconv.Itoa(int(floatDefindex))
+		itemUrl, ok := itemCache[defindex]
+		if !ok {
+			log.Printf("Can't decode defindex: %s", itemName)
+			continue
+		}
+
 		cacheItem := ItemDetails{
-			Prices: make(map[qualityItems]ItemPair),
+			IconUrl: itemUrl,
+			Prices:  make(map[qualityItems]ItemPair),
 		}
 		for qualityStr, qualityData := range prices {
 			quality, ok := qualityMap[qualityStr]
