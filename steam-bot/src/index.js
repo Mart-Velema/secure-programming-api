@@ -6,6 +6,7 @@ const {
   loginToSteam,
   getBotInventory,
   sendTradeOffer,
+  getTradeOffer,
 } = require("./steamClient");
 
 const { parseTradeUrl } = require("./tradeUrl");
@@ -154,6 +155,22 @@ app.post("/steam/trade-offers", async (req, res) => {
     res.json({
       ok: true,
       ...result,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+});
+
+app.get("/steam/trade-offers/:tradeOfferId", async (req, res) => {
+  try {
+    const offer = await getTradeOffer(req.params.tradeOfferId);
+
+    res.json({
+      ok: true,
+      offer,
     });
   } catch (error) {
     res.status(500).json({

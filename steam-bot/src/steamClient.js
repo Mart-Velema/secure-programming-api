@@ -3,6 +3,7 @@ const SteamUser = require("steam-user");
 const client = new SteamUser();
 const SteamCommunity = require("steamcommunity");
 const TradeOfferManager = require("steam-tradeoffer-manager");
+const SteamTotp = require("steam-totp");
 
 const community = new SteamCommunity();
 
@@ -98,7 +99,11 @@ function loginToSteam(authCode) {
     password: process.env.STEAM_PASSWORD,
   };
 
-  if (authCode) {
+  if (process.env.STEAM_SHARED_SECRET) {
+  logOnOptions.twoFactorCode = SteamTotp.generateAuthCode(
+    process.env.STEAM_SHARED_SECRET
+  );
+  } else if (authCode) {
     logOnOptions.authCode = authCode;
   }
 
@@ -174,10 +179,45 @@ function sendTradeOffer(tradeUrl, itemsToGive, message = "GuineaTrade test offer
   });
 }
 
+function getTradeOffer(tradeOfferId) {
+  return new Promise((resolve, reject) => {
+    manager.getOffer(tradeOfferId, (err, offer) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      resolve({
+        id: offer.id,
+        state: offer.state,
+        stateName: TradeOfferManager.ETradeOfferState[offer.state],
+        partner: offer.partner ? offer.partner.getSteamID64() : null,
+        message: offer.message,
+        created: offer.created,
+        updated: offer.updated,
+        expires: offer.expires,
+        itemsToGive: offer.itemsToGive.map((item) => ({
+          assetId: item.assetid,
+          appId: item.appid,
+          contextId: item.contextid,
+          marketHashName: item.market_hash_name,
+        })),
+        itemsToReceive: offer.itemsToReceive.map((item) => ({
+          assetId: item.assetid,
+          appId: item.appid,
+          contextId: item.contextid,
+          marketHashName: item.market_hash_name,
+        })),
+      });
+    });
+  });
+}
+
 module.exports = {
   client,
   getSteamClientStatus,
   loginToSteam,
   getBotInventory,
   sendTradeOffer,
+  getTradeOffer,
 };
