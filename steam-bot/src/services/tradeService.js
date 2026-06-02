@@ -133,9 +133,33 @@ function getTradeOffers() {
   });
 }
 
+function acceptTradeOffer(tradeOfferId) {
+  return new Promise((resolve, reject) => {
+    manager.getOffer(tradeOfferId, (err, offer) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      offer.accept((acceptErr, status) => {
+        if (acceptErr) {
+          reject(acceptErr);
+          return;
+        }
+
+        resolve({
+          tradeOfferId: offer.id,
+          status,
+        });
+      });
+    });
+  });
+}
+
 module.exports = {
   sendTradeOffer,
   getTradeOffer,
-  cancelTradeOffer,
   getTradeOffers,
+  cancelTradeOffer,
+  acceptTradeOffer,
 };

@@ -6,8 +6,9 @@ const { getSteamClientStatus } = require("../services/steamClient");
 const {
   sendTradeOffer,
   getTradeOffer,
-  cancelTradeOffer,
   getTradeOffers,
+  cancelTradeOffer,
+  acceptTradeOffer,
 } = require("../services/tradeService");
 
 const router = express.Router();
@@ -110,13 +111,13 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/:tradeOfferId", async (req, res) => {
+router.post("/:tradeOfferId/cancel", async (req, res) => {
   try {
-    const offer = await getTradeOffer(req.params.tradeOfferId);
+    const result = await cancelTradeOffer(req.params.tradeOfferId);
 
     res.json({
       ok: true,
-      offer,
+      ...result,
     });
   } catch (error) {
     res.status(500).json({
@@ -126,13 +127,31 @@ router.get("/:tradeOfferId", async (req, res) => {
   }
 });
 
-router.post("/:tradeOfferId/cancel", async (req, res) => {
+router.post("/:tradeOfferId/accept", async (req, res) => {
   try {
-    const result = await cancelTradeOffer(req.params.tradeOfferId);
+    const result = await acceptTradeOffer(
+      req.params.tradeOfferId
+    );
 
     res.json({
       ok: true,
       ...result,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+});
+
+router.get("/:tradeOfferId", async (req, res) => {
+  try {
+    const offer = await getTradeOffer(req.params.tradeOfferId);
+
+    res.json({
+      ok: true,
+      offer,
     });
   } catch (error) {
     res.status(500).json({
