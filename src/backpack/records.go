@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-const minimumPriceInCents = 5
-
 type Quality string
 
 const (
@@ -62,6 +60,44 @@ type pricingData struct {
 	} `json:"response,omitempty"`
 }
 
+func (pd *pricingData) toCache(currencyConversions *flatCurrency) (*PricingDataCache, error) {
+	cache := &PricingDataCache{
+		CachedOn: time.Now(),
+		Items:    make(map[string]ItemDetails),
+	}
+
+	for itemName, item := range pd.Response.Items {
+		if len(item.Defindex) == 0 {
+			log.Printf("Can't find defindexes for: %s", itemName)
+			continue
+		}
+		var defindexList = make([]uint, len(item.Defindex))
+		for idx, defindex := range item.Defindex {
+			defindexList[idx] = uint(defindex)
+		}
+		itemUrl, ok := itemCache[strconv.Itoa(int(defindexList[0]))] // Because of course just using uint is not good enough for you
+		if !ok {
+			log.Printf("Can't decode defindex: %s", itemName)
+			continue
+		}
+
+		cacheItem := ItemDetails{
+			IconUrl:  itemUrl,
+			Defindex: defindexList,
+			Prices:   make(map[Quality]ItemPair),
+		}
+		err := cacheItem.toCache(item.Prices, currencyConversions)
+		if err != nil {
+			log.Printf("Unable to cache item: %s: %s", itemName, err)
+			continue
+		}
+
+		cache.Items[itemName] = cacheItem
+	}
+
+	return cache, nil
+}
+
 type itemData struct {
 	Defindex []float64           `json:"defindex"`
 	Prices   map[string]tradable `json:"prices"`
@@ -74,27 +110,6 @@ type tradable struct {
 	} `json:"Tradable"` // EVIL!!!
 }
 
-func (t *tradable) getRawCurrencies(currencyConversions *flatCurrency) (ItemPair, error) {
-	itemPair := ItemPair{
-		Craftable:   make(map[uint]uint),
-		Uncraftable: make(map[uint]uint),
-	}
-	
-	craftableMap, err := parseField(t.Tradable.Craftable, currencyConversions)
-	if err != nil {
-		return ItemPair{}, err
-	}
-	itemPair.Craftable = craftableMap
-
-	uncraftableMap, err := parseField(t.Tradable.Uncraftable, currencyConversions)
-	if err != nil {
-		return ItemPair{}, err
-	}
-	itemPair.Uncraftable = uncraftableMap
-
-	return itemPair, nil
-}
-
 func parseField(field any, currencyConversions *flatCurrency) (map[uint]uint, error) {
 	resultMap := make(map[uint]uint)
 
@@ -105,7 +120,7 @@ func parseField(field any, currencyConversions *flatCurrency) (map[uint]uint, er
 			return nil, err
 		}
 		for idx, rawPrice := range parsed {
-			resultMap[idx] = rawPrice.toUSD(currencyConversions)
+			resultMap[idx] = currencyConversions.toRealPrice(rawPrice.Value, rawPrice.Currency)
 		}
 
 	case []any:
@@ -116,10 +131,7 @@ func parseField(field any, currencyConversions *flatCurrency) (map[uint]uint, er
 		if err != nil {
 			return nil, err
 		}
-		resultMap[0] = result.toUSD(currencyConversions)
-
-	case nil:
-		return nil, errors.New("not a valid item field")
+		resultMap[0] = currencyConversions.toRealPrice(result.Value, result.Currency)
 	}
 
 	return resultMap, nil
@@ -128,21 +140,6 @@ func parseField(field any, currencyConversions *flatCurrency) (map[uint]uint, er
 type rawPrices struct {
 	Value    float64
 	Currency string
-}
-
-func (r *rawPrices) toUSD(currencyConversions *flatCurrency) uint {
-	switch r.Currency {
-	case "keys":
-		return uint(currencyConversions.Keys * r.Value * 100)
-	case "metal":
-		price := uint(currencyConversions.Metal * r.Value * 100)
-		if price <= minimumPriceInCents {
-			return price
-		}
-		return minimumPriceInCents
-	default:
-		return 0
-	}
 }
 
 func parseOther(rawItemDetails any) (rawPrices, error) {
@@ -196,7 +193,11 @@ func (id *ItemDetails) toCache(tradable map[string]tradable, currencyConversion 
 		if !ok {
 			return fmt.Errorf("unknown quality number: %s", qualityNumber)
 		}
-		itemPair, err := tradableItem.getRawCurrencies(currencyConversion)
+		itemPair := ItemPair{
+			Craftable:   make(map[uint]uint),
+			Uncraftable: make(map[uint]uint),
+		}
+		err := itemPair.toCache(tradableItem, currencyConversion)
 		if err != nil {
 			return err
 		}
@@ -212,71 +213,18 @@ type ItemPair struct {
 	Uncraftable map[uint]uint `json:"non-craftable,omitempty"`
 }
 
-func (pd *pricingData) toCache(currencyConversions *flatCurrency) (*PricingDataCache, error) {
-	cache := &PricingDataCache{
-		CachedOn: time.Now(),
-		Items:    make(map[string]ItemDetails),
+func (ip *ItemPair) toCache(t tradable, currencyConversion *flatCurrency) error {
+	craftableMap, err := parseField(t.Tradable.Craftable, currencyConversion)
+	if err != nil {
+		return err
 	}
+	ip.Craftable = craftableMap
 
-	for itemName, item := range pd.Response.Items {
-		if itemName == "Übersaw" {
-			fmt.Println(itemName)
-		}
-		if len(item.Defindex) == 0 {
-			log.Printf("Can't find defindexes for: %s", itemName)
-			continue
-		}
-		var defindexList = make([]uint, len(item.Defindex))
-		for idx, defindex := range item.Defindex {
-			defindexList[idx] = uint(defindex)
-		}
-		itemUrl, ok := itemCache[strconv.Itoa(int(defindexList[0]))] // Because of course just using uint is not good enough for you
-		if !ok {
-			log.Printf("Can't decode defindex: %s", itemName)
-			continue
-		}
-
-		cacheItem := ItemDetails{
-			IconUrl:  itemUrl,
-			Defindex: defindexList,
-			Prices:   make(map[Quality]ItemPair),
-		}
-		err := cacheItem.toCache(item.Prices, currencyConversions)
-		if err != nil {
-			log.Printf("Unable to cache item: %s: %s", itemName, err)
-			continue
-		}
-
-		cache.Items[itemName] = cacheItem
+	uncraftableMap, err := parseField(t.Tradable.Uncraftable, currencyConversion)
+	if err != nil {
+		return err
 	}
+	ip.Uncraftable = uncraftableMap
 
-	return cache, nil
-}
-
-type currencyData struct {
-	Response struct {
-		Success    int64 `json:"success,omitempty"`
-		Currencies map[string]struct {
-			Name  string `json:"name"`
-			Price struct {
-				Value    float64 `json:"value"`
-				Currency string  `json:"currency"`
-			}
-		} `json:"currencies,omitempty"`
-	} `json:"response,omitempty"`
-}
-
-type flatCurrency struct {
-	Keys  float64
-	Metal float64
-}
-
-func (c *currencyData) flatten() *flatCurrency {
-	metalValue := c.Response.Currencies["metal"].Price.Value
-	keyValue := c.Response.Currencies["keys"].Price.Value
-
-	return &flatCurrency{
-		Metal: metalValue,
-		Keys:  keyValue * metalValue,
-	}
+	return nil
 }
