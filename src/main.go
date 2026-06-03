@@ -64,12 +64,7 @@ func main() {
 				multifactorAuthGroup.DELETE("/totp/reset", mfa.ResetTOTP)
 			}
 		}
-		backpackGroup := apiRestricted.Group("/backpack")
-		{
-			backpackGroup.GET("/prices", backpack.GetPrices)
-			backpackGroup.GET("/prices/:item", backpack.GetItemDetails)
-			backpackGroup.GET("/currency", backpack.GetCurrencies)
-		}
+		apiRestricted.GET("/backpack/prices", backpack.GetPrices)
 	}
 
 	err := router.Run(fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT")))
