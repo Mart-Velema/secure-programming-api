@@ -1,6 +1,7 @@
 package steam
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -8,17 +9,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GetBotStatus(c *gin.Context) {
+func steamBotRequest(c *gin.Context, method string, path string, body io.Reader) {
 	botURL := os.Getenv("STEAM_BOT_URL")
 	botAPIKey := os.Getenv("BOT_API_KEY")
 
-	req, err := http.NewRequest("GET", botURL+"/steam/status", nil)
+	url := fmt.Sprintf("%s%s", botURL, path)
+
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	req.Header.Set("X-API-Key", botAPIKey)
+
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -27,11 +34,28 @@ func GetBotStatus(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.Data(resp.StatusCode, "application/json", body)
+	c.Data(resp.StatusCode, "application/json", responseBody)
+}
+
+func GetBotStatus(c *gin.Context) {
+	steamBotRequest(c, http.MethodGet, "/steam/status", nil)
+}
+
+func GetBotInventory(c *gin.Context) {
+	appId := c.DefaultQuery("appId", "730")
+	contextId := c.DefaultQuery("contextId", "2")
+
+	path := fmt.Sprintf(
+		"/steam/inventory?appId=%s&contextId=%s",
+		appId,
+		contextId,
+	)
+
+	steamBotRequest(c, http.MethodGet, path, nil)
 }

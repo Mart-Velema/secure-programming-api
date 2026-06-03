@@ -48,11 +48,6 @@ func main() {
 		apiPublic.POST("/refresh", auth.Refresh)
 	}
 
-	steamPublic := router.Group("/api/v1/steam")
-	{
-		steamPublic.GET("/status", steam.GetBotStatus)
-	}
-
 	apiRestricted := router.Group("/api/v1")
 	apiRestricted.Use(middleware.JwtAuthMiddleware())
 	{
@@ -75,6 +70,11 @@ func main() {
 			backpackGroup.GET("/prices", backpack.GetPrices)
 			backpackGroup.GET("/prices/:item", backpack.GetItemDetails)
 			backpackGroup.GET("/currency", backpack.GetCurrencies)
+		}
+		steamGroup := apiRestricted.Group("/steam")
+		{
+			steamGroup.GET("/status", steam.GetBotStatus)
+			steamGroup.GET("/inventory", steam.GetBotInventory)
 		}
 	}
 
