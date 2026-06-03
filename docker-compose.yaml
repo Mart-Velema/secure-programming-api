@@ -6,7 +6,22 @@ services:
       dockerfile: ./docker/Dockerfile
     container_name: secureprogramming
     restart: unless-stopped
+    env_file:
+      - .env
     volumes:
       - ./docker/data:/data
     ports:
       - "${PORT}:${PORT}"
+    depends_on:
+      - steam-bot
+
+  steam-bot:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.bot
+    container_name: guineatrade-steam-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    expose:
+      - "3001"

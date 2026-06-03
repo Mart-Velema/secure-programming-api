@@ -12,6 +12,7 @@ import (
 	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/backpack"
 	"guineatrade.nhlstenden.com/src/database"
+	"guineatrade.nhlstenden.com/src/steam"
 )
 
 func HelloWorld(c *gin.Context) {
@@ -45,6 +46,11 @@ func main() {
 		apiPublic.POST("/register", auth.Register)
 		apiPublic.POST("/login", auth.Login)
 		apiPublic.POST("/refresh", auth.Refresh)
+	}
+
+	steamPublic := router.Group("/api/v1/steam")
+	{
+		steamPublic.GET("/status", steam.GetBotStatus)
 	}
 
 	apiRestricted := router.Group("/api/v1")
