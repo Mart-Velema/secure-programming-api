@@ -59,3 +59,22 @@ func GetBotInventory(c *gin.Context) {
 
 	steamBotRequest(c, http.MethodGet, path, nil)
 }
+
+func GetTradeOffers(c *gin.Context) {
+	steamBotRequest(c, http.MethodGet, "/steam/trade-offers", nil)
+}
+
+func GetTradeOfferHistory(c *gin.Context) {
+	steamBotRequest(c, http.MethodGet, "/steam/trade-offers/history", nil)
+}
+
+func GetTradeOffer(c *gin.Context) {
+	tradeOfferId := c.Param("tradeOfferId")
+
+	path := fmt.Sprintf(
+		"/steam/trade-offers/%s",
+		tradeOfferId,
+	)
+
+	steamBotRequest(c, http.MethodGet, path, nil)
+}

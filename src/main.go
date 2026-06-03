@@ -75,6 +75,10 @@ func main() {
 		{
 			steamGroup.GET("/status", steam.GetBotStatus)
 			steamGroup.GET("/inventory", steam.GetBotInventory)
+
+			steamGroup.GET("/trade-offers", steam.GetTradeOffers)
+			steamGroup.GET("/trade-offers/history", steam.GetTradeOfferHistory)
+			steamGroup.GET("/trade-offers/:tradeOfferId", steam.GetTradeOffer)
 		}
 	}
 
