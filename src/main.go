@@ -74,11 +74,14 @@ func main() {
 		steamGroup := apiRestricted.Group("/steam")
 		{
 			steamGroup.GET("/status", steam.GetBotStatus)
+			steamGroup.POST("/login", steam.LoginBot)
 			steamGroup.GET("/inventory", steam.GetBotInventory)
-
 			steamGroup.GET("/trade-offers", steam.GetTradeOffers)
 			steamGroup.GET("/trade-offers/history", steam.GetTradeOfferHistory)
 			steamGroup.GET("/trade-offers/:tradeOfferId", steam.GetTradeOffer)
+			steamGroup.POST("/trade-offers", steam.SendTradeOffer)
+			steamGroup.POST("/trade-offers/:tradeOfferId/accept", steam.AcceptTradeOffer)
+			steamGroup.POST("/trade-offers/:tradeOfferId/cancel", steam.CancelTradeOffer)
 		}
 	}
 

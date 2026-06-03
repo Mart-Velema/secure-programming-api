@@ -78,3 +78,33 @@ func GetTradeOffer(c *gin.Context) {
 
 	steamBotRequest(c, http.MethodGet, path, nil)
 }
+
+func LoginBot(c *gin.Context) {
+	steamBotRequest(c, http.MethodPost, "/steam/login", c.Request.Body)
+}
+
+func SendTradeOffer(c *gin.Context) {
+	steamBotRequest(c, http.MethodPost, "/steam/trade-offers", c.Request.Body)
+}
+
+func AcceptTradeOffer(c *gin.Context) {
+	tradeOfferId := c.Param("tradeOfferId")
+
+	path := fmt.Sprintf(
+		"/steam/trade-offers/%s/accept",
+		tradeOfferId,
+	)
+
+	steamBotRequest(c, http.MethodPost, path, nil)
+}
+
+func CancelTradeOffer(c *gin.Context) {
+	tradeOfferId := c.Param("tradeOfferId")
+
+	path := fmt.Sprintf(
+		"/steam/trade-offers/%s/cancel",
+		tradeOfferId,
+	)
+
+	steamBotRequest(c, http.MethodPost, path, nil)
+}
