@@ -31,16 +31,13 @@ func (c *currencyData) flatten() *flatCurrency {
 }
 
 func (c *flatCurrency) toRealPrice(value float64, currency string) uint {
+	var price uint
 	switch currency {
 	case "keys":
-		return uint(c.Keys * value * 100)
+		price = uint(c.Keys * value * 100)
 	case "metal":
-		price := uint(c.Metal * value * 100)
-		if price <= minimumPriceInCents {
-			return price
-		}
-		return minimumPriceInCents
-	default:
-		return 0
+		price = uint(c.Metal * value * 100)
 	}
+
+	return max(price, minimumPriceInCents)
 }
