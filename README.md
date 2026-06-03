@@ -23,7 +23,7 @@ go version
 ```
 
 
-The minimum required version is Go version `1.26.3`
+The minimum required version is Go version `1.26.4`
 
 You might also need to install [SQLite3](https://sqlite.org/download.html) as well. 
 This can be either done through downloading and installing an installer from the website, or by using your favourite package manager of choice:
