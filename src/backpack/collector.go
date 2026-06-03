@@ -1,6 +1,7 @@
 package backpack
 
 import (
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -25,17 +26,7 @@ var (
 	itemCache     map[string]string
 )
 
-var client = http.Client{
-	Transport: &http.Transport{
-		MaxIdleConns:    30,
-		MaxConnsPerHost: 10,
-		IdleConnTimeout: 30 * time.Second,
-		TLSClientConfig: &tls.Config{
-			ServerName:         "backpack.tf",
-			InsecureSkipVerify: false,
-		},
-	},
-}
+var client *http.Client
 
 func init() {
 	err := godotenv.Load()
@@ -43,9 +34,33 @@ func init() {
 		log.Fatalf("Error loading .env file: %s\n", err)
 	}
 	envApiKey, apiKeyExists := os.LookupEnv("BACKPACK_API_KEY")
+	envApiHash, apiHashExists := os.LookupEnv("BACKPACK_API_HASH")
 
-	if !apiKeyExists {
-		log.Fatal("BACKPACK_API_KEY is unset")
+	if !apiKeyExists || !apiHashExists {
+		log.Fatal("BACKPACK_API_KEY or BACKPACK_API_HASH is unset")
+	}
+	client = &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:    30,
+			MaxConnsPerHost: 10,
+			IdleConnTimeout: 30 * time.Second,
+			TLSClientConfig: &tls.Config{
+				ServerName:         "backpack.tf",
+				InsecureSkipVerify: false,
+				VerifyConnection: func(cs tls.ConnectionState) error {
+					if len(cs.PeerCertificates) == 0 {
+						return fmt.Errorf("no certificates provided by server")
+					}
+					cert := cs.PeerCertificates[0]
+					pubKeyHash := sha256.Sum256(cert.RawSubjectPublicKeyInfo)
+					actualHash := fmt.Sprintf("sha256:%x", pubKeyHash)
+					if actualHash != envApiHash {
+						return fmt.Errorf("public key hash mismatch: expected %s, got %s", envApiHash, actualHash)
+					}
+					return nil
+				},
+			},
+		},
 	}
 
 	apiKey = envApiKey

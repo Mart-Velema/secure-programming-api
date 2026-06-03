@@ -71,7 +71,13 @@ JWT_REFRESH_DAYS=7 # Time the refresh token is valid in days
 
 # Backpack.tf
 BACKPACK_API_KEY="12345678901234567890abcd" # The Backpack.TF API key
+BACKPACK_API_HASH="sha256:39a999a6d0aad5c4be9ea3c952dd6331d6c14ff2b2c0f1e1e99fb11e8653e78f" # The backpack.tf API hash
 
+```
+
+API hashes can be generated with the following OpenSSL pipeline:
+```sh
+openssl s_client -connect backpack.tf:443 -servername backpack.tf | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256
 ```
 
 <hr>
