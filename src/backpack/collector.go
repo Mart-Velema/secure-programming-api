@@ -20,10 +20,9 @@ const (
 )
 
 var (
-	apiKey        string
-	PricingCache  PricingDataCache
-	CurrencyCache CurrencyDataCache
-	itemCache     map[string]string
+	apiKey       string
+	PricingCache PricingDataCache
+	itemCache    map[string]string
 )
 
 var client *http.Client
@@ -106,7 +105,6 @@ func init() {
 		installItemCache()
 		for {
 			updatePriceCache()
-			updateCurrencyCache()
 			now := time.Now().Truncate(time.Hour)
 
 			timeTillNextUpdate := 6 - (now.Hour() % 6)
@@ -188,7 +186,12 @@ func updatePriceCache() {
 		log.Println(err)
 		return
 	}
-	priceCache, err := priceResult.toCache()
+	currencyResult, err := getCurrency()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	priceCache, err := priceResult.toCache(currencyResult.flatten())
 	if err != nil {
 		log.Println(err)
 		log.Println("Using old cache")
@@ -196,18 +199,6 @@ func updatePriceCache() {
 	}
 	PricingCache = *priceCache
 	log.Printf("Updated Price cache on %s", time.Now().String())
-}
-
-func updateCurrencyCache() {
-	priceResult, err := getCurrency()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	currencyCache := priceResult.toCache()
-
-	CurrencyCache = *currencyCache
-	log.Printf("Updated Currency cache on %s", time.Now().String())
 }
 
 func installItemCache() {
