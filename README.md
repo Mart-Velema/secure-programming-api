@@ -11,7 +11,7 @@ The API for GuineaTrade
 ### Installing prerequisites
 
 To start working on the API, you must first install the Go language from [go.dev](https://go.dev/dl/).
-The minimum required version is Go version `1.26.2`
+The minimum required version is Go version `1.26.3`
 
 You might also need to install [SQLite3](https://sqlite.org/download.html) as well. 
 This can be either done through downloading and installing an installer from the website, or by using your favourite package manager of choice:
@@ -50,13 +50,15 @@ PORT="3000" # The port to run the API on
 
 # Database
 ENCRYPTION_KEY="Fy2mcmCCOS6LsLRpkoeJSFCNVaixHN9oLEdoU+6lu2A=" # A Base64 encoded 32 byte sequence used as the master key to encrypting and decrypting the database entries
-ENCRYPTION_PASSCODE="My Super Secure Password!" # A Generic any-length string that will be used as the master password. Overrides the value of ENCRYPTION_KEY
 SQLITE_FILE_LOCATION="./guineatrade.db" # The filepath where the SQLite3 database file is located
 
 # JWT
 JWT_SECRET_KEY="superlongkey" # A long string of random data to act as the signing key for JWT. Recommended to have at least 64 characters or more
-JWT_TIMEOUT_HOURS=3 # Time a JWT is valid in minutes
+JWT_TIMEOUT_MINUTES=3 # Time a JWT is valid in minutes
 JWT_REFRESH_DAYS=7 # Time the refresh token is valid in days
+
+# Backpack.tf
+BACKPACK_API_KEY="12345678901234567890abcd" # The Backpack.TF API key
 
 ```
 
@@ -74,6 +76,34 @@ db := database.getInstance()
 The database can also be seeded with random values. You can enable seeding by passing `--seed` as a CLI argument
 
 _note_: Seeding the database permanently and destructively deletes the entire database. Really, it literally deletes the file permanently.
+
+### Middlewares
+
+There are two different middleware suites available: JWT and TOTP.
+
+#### JWT
+
+JSON Web Token is used for basic authentication and verifying that a user is nog a web crawler. JWT's are send and checked using the Authorization HTTP header. Each user gets a unique JWT, and are valid for only a few minutes.
+With `middleware.ExtractTokenUser()`, you can get the User from the current context.
+
+```http request
+GET /api/v1/auth/me HTTP/1.1
+Authorization: Bearer <JWT>
+```
+
+#### TOTP
+
+Time based One TIme Passwords are 6 digit codes that are valid for 30 seconds. TOTP should be used for sensitive transactions which could cost us or the user money.
+The user may send a recovery code in certain contexes to reset the TOTP. 
+
+_the recovery code should never be used for verification_
+
+```http request
+POST /api/v1/auth/mfa/totp/reset HTTP/1.1
+Authorization: Bearer <JWT>
+X-TOTP-Token: <TOTP>
+X-Recovery-Code: <Recovery>
+```
 
 ## Server Hosting
 
