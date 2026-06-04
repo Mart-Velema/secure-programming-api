@@ -104,7 +104,10 @@ func init() {
 	go func() {
 		installItemCache()
 		for {
-			updatePriceCache()
+			err := updatePriceCache()
+			if err != nil {
+				log.Printf("using old cache: %s", err)
+			}
 			now := time.Now().Truncate(time.Hour)
 
 			timeTillNextUpdate := 6 - (now.Hour() % 6)
@@ -180,25 +183,22 @@ func getCurrency() (*currencyData, error) {
 	return &currencyResponse, nil
 }
 
-func updatePriceCache() {
+func updatePriceCache() error {
 	priceResult, err := getPrice()
 	if err != nil {
-		log.Println(err)
-		return
+		return err
 	}
 	currencyResult, err := getCurrency()
 	if err != nil {
-		log.Println(err)
-		return
+		return err
 	}
 	priceCache, err := priceResult.toCache(currencyResult.flatten())
 	if err != nil {
-		log.Println(err)
-		log.Println("Using old cache")
-		return
+		return err
 	}
 	PricingCache = *priceCache
 	log.Printf("Updated Price cache on %s", time.Now().String())
+	return nil
 }
 
 func installItemCache() {
