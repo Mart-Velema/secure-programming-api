@@ -18,5 +18,11 @@ func init() {
 		log.Fatalf("Error loading .env file: %s\n", err)
 	}
 
-	sc = stripe.NewClient(os.Getenv("STRIPE_SECRET_KEY"))
+	stripeApiKey, apiKeyExists := os.LookupEnv("STRIPE_SECRET_KEY")
+
+	if !apiKeyExists {
+		log.Fatal("STRIPE_SECRET_KEY is unset")
+	}
+
+	sc = stripe.NewClient(stripeApiKey)
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -34,7 +33,7 @@ func init() {
 func Webhook(c *gin.Context) {
 	payload, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.String(http.StatusBadRequest, "Invalid Payload")
+		c.String(400, "Invalid Payload")
 		log.Printf("Error reading payload: %s\n", err)
 		return
 	}
@@ -58,13 +57,4 @@ func Webhook(c *gin.Context) {
 		c.String(200, checkoutComplete.Metadata["order-id"])
 		log.Println(checkoutComplete.Metadata["order-id"])
 	}
-
-	//body, err := io.ReadAll(c.Request.Body)
-	//if err != nil {
-	//	fmt.Println("error reading body:", err)
-	//	return
-	//}
-	//
-	//fmt.Println("Request body:")
-	//fmt.Println(string(body))
 }
