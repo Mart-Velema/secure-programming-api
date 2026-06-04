@@ -2,41 +2,34 @@ package backpack
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
 )
 
-type currencyItems string
+type Quality string
 
 const (
-	CurrencyUsd   = "usd"
-	CurrencyMetal = "metal"
-	CurrencyKey   = "keys"
+	Normal     Quality = "Normal"
+	Genuine    Quality = "Genuine"
+	Rarity2    Quality = "Rarity2"
+	Vintage    Quality = "Vintage"
+	Rarity3    Quality = "Rarity3"
+	Unusual    Quality = "Unusual"
+	Unique     Quality = "Unique"
+	Community  Quality = "Community"
+	Valve      Quality = "Valve"
+	SelfMade   Quality = "Self-Made"
+	Customized Quality = "Customized"
+	Strange    Quality = "Strange"
+	Completed  Quality = "Completed"
+	Haunted    Quality = "Haunted"
+	Collectors Quality = "Collectors"
+	Decorated  Quality = "Decorated"
 )
 
-type qualityItems int
-
-const (
-	Normal qualityItems = iota
-	Genuine
-	Rarity2
-	Vintage
-	Rarity3
-	Unusual
-	Unique
-	Community
-	Valve
-	SelfMade
-	Customized
-	Strange
-	Completed
-	Haunted
-	Collectors
-	Decorated
-)
-
-var qualityMap = map[string]qualityItems{
+var qualityMap = map[string]Quality{
 	"0":  Normal,
 	"1":  Genuine,
 	"2":  Rarity2,
@@ -55,15 +48,132 @@ var qualityMap = map[string]qualityItems{
 	"15": Decorated,
 }
 
+// API output
 type pricingData struct {
 	Response struct {
-		Success          int64          `json:"success,omitempty"`
-		CurrentTime      int64          `json:"current_time,omitempty"`
-		RawUsdValue      float64        `json:"raw_usd_value,omitempty"`
-		UsdCurrency      string         `json:"usd_currency,omitempty"`
-		UsdCurrencyIndex int64          `json:"usd_currency_index,omitempty"`
-		Items            map[string]any `json:"items,omitempty"`
+		Success          int64               `json:"success,omitempty"`
+		CurrentTime      int64               `json:"current_time,omitempty"`
+		RawUsdValue      float64             `json:"raw_usd_value,omitempty"`
+		UsdCurrency      string              `json:"usd_currency,omitempty"`
+		UsdCurrencyIndex int64               `json:"usd_currency_index,omitempty"`
+		Items            map[string]itemData `json:"items,omitempty"`
 	} `json:"response,omitempty"`
+}
+
+func (pd *pricingData) toCache(currencyConversions *flatCurrency) (*PricingDataCache, error) {
+	cache := &PricingDataCache{
+		CachedOn: time.Now(),
+		Items:    make(map[string]ItemDetails),
+	}
+
+	for itemName, item := range pd.Response.Items {
+		if len(item.Defindex) == 0 {
+			log.Printf("Can't find defindexes for: %s", itemName)
+			continue
+		}
+		var defindexList = make([]uint, len(item.Defindex))
+		for idx, defindex := range item.Defindex {
+			defindexList[idx] = uint(defindex)
+		}
+		itemUrl, ok := itemCache[strconv.Itoa(int(defindexList[0]))] // Because of course just using uint is not good enough for you
+		if !ok {
+			log.Printf("Can't decode defindex: %s", itemName)
+			continue
+		}
+
+		cacheItem := ItemDetails{
+			IconUrl:  itemUrl,
+			Defindex: defindexList,
+			Prices:   make(map[Quality]ItemPair),
+		}
+		err := cacheItem.toCache(item.Prices, currencyConversions)
+		if err != nil {
+			log.Printf("Unable to cache item: %s: %s", itemName, err)
+			continue
+		}
+
+		cache.Items[itemName] = cacheItem
+	}
+
+	return cache, nil
+}
+
+type itemData struct {
+	Defindex []float64           `json:"defindex"`
+	Prices   map[string]tradable `json:"prices"`
+}
+
+type tradable struct {
+	Tradable struct {
+		Craftable   any `json:"Craftable"`
+		Uncraftable any `json:"Non-Craftable"`
+	} `json:"Tradable"` // EVIL!!!
+}
+
+func parseField(field any, currencyConversions *flatCurrency) (map[uint]uint, error) {
+	resultMap := make(map[uint]uint)
+
+	switch v := field.(type) {
+	case map[string]any:
+		parsed, err := parseUnusual(v)
+		if err != nil {
+			return nil, err
+		}
+		for idx, rawPrice := range parsed {
+			resultMap[idx] = currencyConversions.toRealPrice(rawPrice.Value, rawPrice.Currency)
+		}
+
+	case []any:
+		if len(v) == 0 {
+			return nil, errors.New("item field empty")
+		}
+		result, err := parseOther(v[0])
+		if err != nil {
+			return nil, err
+		}
+		resultMap[0] = currencyConversions.toRealPrice(result.Value, result.Currency)
+	}
+
+	return resultMap, nil
+}
+
+type rawPrices struct {
+	Value    float64
+	Currency string
+}
+
+func parseOther(rawItemDetails any) (rawPrices, error) {
+	var rawPrice rawPrices
+	valueMap, ok := rawItemDetails.(map[string]any)
+	if !ok {
+		return rawPrice, errors.New("input data is not a valid item")
+	}
+
+	if valueMap["currency"] == nil || valueMap["value"] == nil {
+		return rawPrice, errors.New("input data does not contain value or currency fields")
+	}
+	rawPrice.Value = valueMap["value"].(float64)
+	rawPrice.Currency = valueMap["currency"].(string)
+
+	return rawPrice, nil
+}
+
+func parseUnusual(rawItemDetails map[string]any) (map[uint]rawPrices, error) {
+	rawPrice := make(map[uint]rawPrices)
+
+	for key, valueData := range rawItemDetails {
+		keyInt, err := strconv.Atoi(key)
+		if err != nil {
+			keyInt = 0
+		}
+		singlePrice, err := parseOther(valueData)
+		if err != nil {
+			return nil, err
+		}
+		rawPrice[uint(keyInt)] = singlePrice
+	}
+
+	return rawPrice, nil
 }
 
 type PricingDataCache struct {
@@ -72,197 +182,49 @@ type PricingDataCache struct {
 }
 
 type ItemDetails struct {
-	IconUrl string                    `json:"icon"`
-	Prices  map[qualityItems]ItemPair `json:"prices"`
+	IconUrl  string               `json:"icon"`
+	Defindex []uint               `json:"defindex"`
+	Prices   map[Quality]ItemPair `json:"prices"`
 }
 
-type ItemPair struct {
-	Craftable   map[int]Item `json:"craftable,omitempty"`
-	Uncraftable map[int]Item `json:"non-craftable,omitempty"`
-}
+func (id *ItemDetails) toCache(tradable map[string]tradable, currencyConversion *flatCurrency) error {
+	for qualityNumber, tradableItem := range tradable {
+		qualityString, ok := qualityMap[qualityNumber]
+		if !ok {
+			return fmt.Errorf("unknown quality number: %s", qualityNumber)
+		}
+		itemPair := ItemPair{
+			Craftable:   make(map[uint]uint),
+			Uncraftable: make(map[uint]uint),
+		}
+		err := itemPair.toCache(tradableItem, currencyConversion)
+		if err != nil {
+			return err
+		}
 
-func (ip *ItemPair) addItem(key int, valueData any, isCraftable bool) error {
-	valueMap, ok := valueData.(map[string]any)
-	if !ok {
-		return errors.New("input data is not a valid item")
-	}
-
-	if valueMap["currency"] == nil || valueMap["value"] == nil {
-		return errors.New("input data does not contain value or currency fields")
-	}
-
-	item := Item{
-		Currency: currencyItems(valueMap["currency"].(string)),
-		Value:    valueMap["value"].(float64),
-	}
-
-	if isCraftable {
-		ip.Craftable[key] = item
-	} else {
-		ip.Uncraftable[key] = item
+		id.Prices[qualityString] = itemPair
 	}
 
 	return nil
 }
 
-type Item struct {
-	Value    float64       `json:"value"`
-	Currency currencyItems `json:"currency"`
+type ItemPair struct {
+	Craftable   map[uint]uint `json:"craftable,omitempty"`
+	Uncraftable map[uint]uint `json:"non-craftable,omitempty"`
 }
 
-func (pd *pricingData) toCache() (*PricingDataCache, error) {
-	cache := &PricingDataCache{
-		CachedOn: time.Now(),
-		Items:    make(map[string]ItemDetails),
+func (ip *ItemPair) toCache(t tradable, currencyConversion *flatCurrency) error {
+	craftableMap, err := parseField(t.Tradable.Craftable, currencyConversion)
+	if err != nil {
+		return err
 	}
+	ip.Craftable = craftableMap
 
-	for itemName, itemData := range pd.Response.Items {
-		itemMap, ok := itemData.(map[string]any)
-		if !ok {
-			continue
-		}
-		prices, ok := itemMap["prices"].(map[string]any)
-		if !ok {
-			continue
-		}
-
-		defindexes, ok := itemMap["defindex"].([]any)
-		if !ok || len(defindexes) == 0 {
-			log.Printf("Can't find defindex: %s", itemName)
-			continue
-		}
-		floatDefindex, ok := defindexes[0].(float64)
-		if !ok {
-			log.Printf("Can't decode defindex: %s", itemName)
-			continue
-		}
-		defindex := strconv.Itoa(int(floatDefindex))
-		itemUrl, ok := itemCache[defindex]
-		if !ok {
-			log.Printf("Can't decode defindex: %s", itemName)
-			continue
-		}
-
-		cacheItem := ItemDetails{
-			IconUrl: itemUrl,
-			Prices:  make(map[qualityItems]ItemPair),
-		}
-		for qualityStr, qualityData := range prices {
-			quality, ok := qualityMap[qualityStr]
-			if !ok {
-				continue
-			}
-
-			qualityMapData, ok := qualityData.(map[string]any)
-			if !ok {
-				continue
-			}
-
-			itemPair, err := createItemPair(qualityMapData)
-			if err != nil {
-				log.Printf("%s: %s", err, itemName)
-				continue
-			}
-
-			cacheItem.Prices[quality] = itemPair
-		}
-		if len(cacheItem.Prices) != 0 {
-			cache.Items[itemName] = cacheItem
-		}
+	uncraftableMap, err := parseField(t.Tradable.Uncraftable, currencyConversion)
+	if err != nil {
+		return err
 	}
+	ip.Uncraftable = uncraftableMap
 
-	return cache, nil
-}
-
-func createItemPair(qualityMapData map[string]any) (ItemPair, error) {
-	itemPair := ItemPair{
-		Craftable:   make(map[int]Item),
-		Uncraftable: make(map[int]Item),
-	}
-
-	tradableData, ok := qualityMapData["Tradable"].(map[string]any)
-	if !ok {
-		return itemPair, errors.New("no Tradable key found")
-	}
-
-	for _, craftableKey := range []string{"Craftable", "Non-Craftable"} {
-		if _, keyExists := tradableData[craftableKey]; !keyExists {
-			continue
-		}
-		if craftableData, ok := tradableData[craftableKey].(map[string]any); ok {
-			for key, valueData := range craftableData {
-				keyInt, err := strconv.Atoi(key)
-				if err != nil {
-					keyInt = 0
-				}
-				err = itemPair.addItem(keyInt, valueData, craftableKey == "Craftable")
-				if err != nil {
-					return ItemPair{}, err
-				}
-			}
-		} else if singleCraftableData, ok := tradableData[craftableKey].([]any); ok {
-			err := itemPair.addItem(0, singleCraftableData[0], craftableKey == "Craftable")
-			if err != nil {
-				return ItemPair{}, err
-			}
-		} else {
-			return itemPair, errors.New("not a valid item")
-		}
-	}
-
-	return itemPair, nil
-}
-
-type currencyData struct {
-	Response struct {
-		Success    int64 `json:"success,omitempty"`
-		Currencies map[currencyItems]struct {
-			Name  string `json:"name"`
-			Price struct {
-				Value    float64 `json:"value"`
-				Currency string  `json:"currency"`
-			}
-		} `json:"currencies,omitempty"`
-	} `json:"response,omitempty"`
-}
-
-type CurrencyDataCache struct {
-	CachedOn   time.Time                  `json:"cachedOn"`
-	Currencies map[currencyItems]Currency `json:"currencies"`
-}
-
-type Currency struct {
-	CurrencyUsd   float64 `json:"usd"`
-	CurrencyMetal float64 `json:"metal"`
-	CurrencyKey   float64 `json:"keys"`
-}
-
-func (c *currencyData) toCache() *CurrencyDataCache {
-	var currencyCache = &CurrencyDataCache{
-		CachedOn:   time.Now(),
-		Currencies: map[currencyItems]Currency{},
-	}
-
-	metalValue := c.Response.Currencies[CurrencyMetal].Price
-	keyValue := c.Response.Currencies[CurrencyKey].Price
-
-	currencyCache.Currencies[CurrencyUsd] = Currency{
-		CurrencyUsd:   1.0,
-		CurrencyMetal: 1.0 / metalValue.Value,
-		CurrencyKey:   (1.0 / metalValue.Value) / keyValue.Value,
-	}
-
-	currencyCache.Currencies[CurrencyMetal] = Currency{
-		CurrencyUsd:   metalValue.Value,
-		CurrencyMetal: 1.0,
-		CurrencyKey:   1.0 / keyValue.Value,
-	}
-
-	currencyCache.Currencies[CurrencyKey] = Currency{
-		CurrencyUsd:   keyValue.Value * metalValue.Value,
-		CurrencyMetal: keyValue.Value,
-		CurrencyKey:   1.0,
-	}
-
-	return currencyCache
+	return nil
 }
