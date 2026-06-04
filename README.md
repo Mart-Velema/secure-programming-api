@@ -10,21 +10,33 @@ The API for GuineaTrade
 
 ### Installing prerequisites
 
-To start working on the API, you must first install the Go language from [go.dev](https://go.dev/dl/).
-The minimum required version is Go version `1.26.3`
+To start working on the API, you must first install the Go language from [go.dev](https://go.dev/dl/) or run the commands below.
+
+Installing `Go 1.26.4`.
+```shell
+cd
+winget https://go.dev/dl/go1.26.4.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.26.4.linux-amd64.tar.gz
+echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.bashrc
+source $HOME/.profile
+go version
+```
+
+
+The minimum required version is Go version `1.26.4`
 
 You might also need to install [SQLite3](https://sqlite.org/download.html) as well. 
 This can be either done through downloading and installing an installer from the website, or by using your favourite package manager of choice:
 
 ```shell
-# Windows
+# Windows (Outdated, requires gcc)
 winget install -e --id SQLite.SQLite
 
 # Debian
-sudo apt install sqlite3
+sudo apt install sqlite3 gcc
 
 # Fedora
-sudo dnf install sqlite3
+sudo dnf install sqlite3 gcc
 ```
 
 Once you've installed Go, you can run the following command to get started with the dependencies:
@@ -36,7 +48,7 @@ _note_: Make sure you've also configured the `.env` file before you run the API,
 
 To run the API, use:
 ```shell
-go run guineatrade.nhlstenden.com/src
+CGO_ENABLED=1 go run guineatrade.nhlstenden.com/src
 ```
 
 <hr>
@@ -59,7 +71,13 @@ JWT_REFRESH_DAYS=7 # Time the refresh token is valid in days
 
 # Backpack.tf
 BACKPACK_API_KEY="12345678901234567890abcd" # The Backpack.TF API key
+BACKPACK_API_HASH="sha256:39a999a6d0aad5c4be9ea3c952dd6331d6c14ff2b2c0f1e1e99fb11e8653e78f" # The backpack.tf API hash
 
+```
+
+API hashes can be generated with the following OpenSSL pipeline:
+```sh
+openssl s_client -connect backpack.tf:443 -servername backpack.tf | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256
 ```
 
 <hr>
@@ -83,7 +101,7 @@ There are two different middleware suites available: JWT and TOTP.
 
 #### JWT
 
-JSON Web Token is used for basic authentication and verifying that a user is nog a web crawler. JWT's are send and checked using the Authorization HTTP header. Each user gets a unique JWT, and are valid for only a few minutes.
+JSON Web Token is used for basic authentication and verifying that a user is not a web crawler. JWT's are send and checked using the Authorization HTTP header. Each user gets a unique JWT, and are valid for only a few minutes.
 With `middleware.ExtractTokenUser()`, you can get the User from the current context.
 
 ```http request
@@ -93,8 +111,8 @@ Authorization: Bearer <JWT>
 
 #### TOTP
 
-Time based One TIme Passwords are 6 digit codes that are valid for 30 seconds. TOTP should be used for sensitive transactions which could cost us or the user money.
-The user may send a recovery code in certain contexes to reset the TOTP. 
+Time based One Time Passwords are 6 digit codes that are valid for 30 seconds. TOTP should be used for sensitive transactions which could cost us or the user money.
+The user may send a recovery code in certain contexts to reset the TOTP. 
 
 _the recovery code should never be used for verification_
 
