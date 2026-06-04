@@ -23,5 +23,5 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    expose:
-      - "${BOT_PORT}"
+    ports:
+      - "${BOT_PORT}:${BOT_PORT}"
