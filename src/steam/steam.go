@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"log"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,7 +33,12 @@ func steamBotRequest(c *gin.Context, method string, path string, body io.Reader)
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+        err := Body.Close()
+        if err != nil {
+            log.Println(err)
+        }
+    }(resp.Body)
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
