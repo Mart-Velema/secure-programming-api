@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: ./docker/Dockerfile
-    container_name: secureprogramming
+    container_name: guinea-trade-api
     restart: unless-stopped
     env_file:
       - .env
