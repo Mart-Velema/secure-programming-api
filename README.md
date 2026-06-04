@@ -95,15 +95,6 @@ openssl s_client -connect backpack.tf:443 -servername backpack.tf | openssl x509
 
 The Steam trading bot runs as a separate internal service and is started automatically through Docker Compose together with the API.
 
-### Starting the Steam Bot
-
-When using Docker, the Steam bot starts automatically together with the API:
-
-```shell
-docker compose build
-docker compose up
-```
-
 ### Logging Into Steam
 
 If `STEAM_SHARED_SECRET` is not configured, the bot requires a Steam Guard code.
