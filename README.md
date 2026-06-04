@@ -73,6 +73,15 @@ JWT_REFRESH_DAYS=7 # Time the refresh token is valid in days
 BACKPACK_API_KEY="12345678901234567890abcd" # The Backpack.TF API key
 BACKPACK_API_HASH="sha256:39a999a6d0aad5c4be9ea3c952dd6331d6c14ff2b2c0f1e1e99fb11e8653e78f" # The backpack.tf API hash
 
+# Steam Bot
+BOT_PORT="3001" # Internal Steam bot port
+STEAM_BOT_URL=http://steam-bot:3001 # Internal URL used by the Go API to communicate with the Steam bot
+BOT_API_KEY=super-secret-key # Shared API key used between the Go API and Steam bot
+
+STEAM_USERNAME=guineatradebot # Steam account username
+STEAM_PASSWORD= # Steam account password
+STEAM_SHARED_SECRET= # Optional. Enables automatic Steam Guard login
+STEAM_IDENTITY_SECRET= # Optional. Enables automatic trade confirmations
 ```
 
 API hashes can be generated with the following OpenSSL pipeline:
@@ -81,6 +90,49 @@ openssl s_client -connect backpack.tf:443 -servername backpack.tf | openssl x509
 ```
 
 <hr>
+
+## Steam Bot
+
+The Steam trading bot runs as a separate internal service and is started automatically through Docker Compose together with the API.
+
+### Logging Into Steam
+
+If `STEAM_SHARED_SECRET` is not configured, the bot requires a Steam Guard code.
+
+Login through the API:
+
+```http
+POST /api/v1/steam/login
+Authorization: Basic <credentials>
+Content-Type: application/json
+```
+
+Request body:
+
+```json
+{
+  "authCode": "ABCDE"
+}
+```
+
+Replace `ABCDE` with the current Steam Guard code from the Steam Mobile App.
+
+Verify login:
+
+```http
+GET /api/v1/steam/status
+Authorization: Bearer <JWT>
+```
+
+Successful login returns:
+
+```json
+{
+  "loggedOn": true,
+  "steamId": "7656119..."
+}
+```
+
 
 ### Database
 

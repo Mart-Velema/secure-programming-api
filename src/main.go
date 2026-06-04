@@ -12,6 +12,7 @@ import (
 	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/backpack"
 	"guineatrade.nhlstenden.com/src/database"
+	"guineatrade.nhlstenden.com/src/steam"
 )
 
 func HelloWorld(c *gin.Context) {
@@ -66,6 +67,11 @@ func main() {
 			}
 		}
 		apiRestricted.GET("/backpack/prices", backpack.GetPrices)
+	
+		steamGroup := apiRestricted.Group("/steam")
+		{
+			steamGroup.GET("/inventory", steam.GetBotInventory)
+		}
 	}
 
 	err := router.Run(fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT")))
