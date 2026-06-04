@@ -112,7 +112,7 @@ Login through the API:
 
 ```http
 POST /api/v1/steam/login
-Authorization: Bearer <JWT>
+Authorization: Basic <credentials>
 Content-Type: application/json
 ```
 
