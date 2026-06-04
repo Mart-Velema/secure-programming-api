@@ -56,6 +56,7 @@ func main() {
 			authGroup.POST("/logout/all", auth.LogoutAll)
 			authGroup.GET("/me", auth.Me)
 			authGroup.PATCH("/me", auth.UpdatePassword)
+			authGroup.PATCH("/steam", auth.UpdateSteam)
 
 			multifactorAuthGroup := authGroup.Group("/mfa")
 			{
