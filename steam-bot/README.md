@@ -153,17 +153,8 @@ Expected response:
 Example:
 
 ```txt
-GET /steam/inventory?appId=730&contextId=2
+GET /steam/inventory?appId=440&contextId=2
 ```
-
-### Common App IDs
-
-| Game             | App ID | Context ID |
-| ---------------- | ------ | ---------- |
-| Team Fortress 2  | 440    | 2          |
-| Counter-Strike 2 | 730    | 2          |
-
----
 
 ## Available Endpoints
 
@@ -199,7 +190,7 @@ GET /steam/inventory?appId=730&contextId=2
   "tradeUrl": "https://steamcommunity.com/tradeoffer/new/?partner=123456789&token=abcdef",
   "itemsToGive": [
     {
-      "appId": 730,
+      "appId": 440,
       "contextId": 2,
       "assetId": "20540621909"
     }

@@ -54,8 +54,22 @@ func GetBotStatus(c *gin.Context) {
 }
 
 func GetBotInventory(c *gin.Context) {
-	appId := c.DefaultQuery("appId", "730")
+	appId := c.DefaultQuery("appId", "440")
 	contextId := c.DefaultQuery("contextId", "2")
+
+	if appId != "440" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "unsupported appId",
+		})
+		return
+	}
+
+	if contextId != "2" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "unsupported contextId",
+		})
+		return
+	}
 
 	path := fmt.Sprintf(
 		"/steam/inventory?appId=%s&contextId=%s",
@@ -83,10 +97,6 @@ func GetTradeOffer(c *gin.Context) {
 	)
 
 	steamBotRequest(c, http.MethodGet, path, nil)
-}
-
-func LoginBot(c *gin.Context) {
-	steamBotRequest(c, http.MethodPost, "/steam/login", c.Request.Body)
 }
 
 func SendTradeOffer(c *gin.Context) {
