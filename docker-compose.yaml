@@ -24,4 +24,4 @@ services:
     env_file:
       - .env
     expose:
-      - "3001"
+      - "${BOT_PORT}"
