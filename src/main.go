@@ -12,6 +12,7 @@ import (
 	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/backpack"
 	"guineatrade.nhlstenden.com/src/database"
+	"guineatrade.nhlstenden.com/src/stripe"
 )
 
 func HelloWorld(c *gin.Context) {
@@ -40,11 +41,16 @@ func main() {
 
 	router := gin.Default()
 
-	apiPublic := router.Group("/api/v1/auth")
+	apiPublic := router.Group("/api/v1")
 	{
-		apiPublic.POST("/register", auth.Register)
-		apiPublic.POST("/login", auth.Login)
-		apiPublic.POST("/refresh", auth.Refresh)
+		authGroup := apiPublic.Group("/auth")
+		{
+			authGroup.POST("/register", auth.Register)
+			authGroup.POST("/login", auth.Login)
+			authGroup.POST("/refresh", auth.Refresh)
+		}
+
+		apiPublic.POST("/stripe/webhook", stripe.Webhook)
 	}
 
 	apiRestricted := router.Group("/api/v1")
@@ -69,6 +75,10 @@ func main() {
 			backpackGroup.GET("/prices", backpack.GetPrices)
 			backpackGroup.GET("/prices/:item", backpack.GetItemDetails)
 			backpackGroup.GET("/currency", backpack.GetCurrencies)
+		}
+		stripeGroup := apiRestricted.Group("/stripe")
+		{
+			stripeGroup.GET("/createPaymentSession", stripe.CreatePaymentSession)
 		}
 	}
 
