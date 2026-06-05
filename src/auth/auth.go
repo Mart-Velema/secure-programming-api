@@ -245,7 +245,7 @@ func UpdateSteam(c *gin.Context) {
 		GetInstance().
 		Select("steam_id", "trade_url").
 		Save(&user); result.Error != nil {
-		SendError(c, http.StatusUnprocessableEntity, err)
+		SendError(c, http.StatusUnprocessableEntity, result.Error)
 		return
 	}
 
