@@ -27,7 +27,7 @@ type User struct {
 	Password     string         `json:"password" hash:"Password"`
 	Balance      int64          `json:"-" gorm:"default:0"`
 	SteamId      uint64         `json:"steamId"`
-	TradeUrl     string         `json:"tradeUrl" encrypt:"true" gorm:"unique"`
+	TradeUrl     string         `json:"tradeUrl" encrypt:"true"`
 	TotpSecret   string         `encrypt:"true"`
 	RecoveryCode string         `hash:"true"`
 	Trades       []Trade        `gorm:"foreignKey:UserID"`
