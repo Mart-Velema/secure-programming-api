@@ -22,8 +22,13 @@ const (
 var (
 	apiKey       string
 	PricingCache PricingDataCache
-	itemCache    map[string]string
+	itemCache    map[string]itemConstants
 )
+
+type itemConstants struct {
+	Url            string `json:"url"`
+	MarketHashName string `json:"marketHashName"`
+}
 
 var client *http.Client
 
@@ -202,12 +207,12 @@ func updatePriceCache() error {
 }
 
 func installItemCache() {
-	content, err := os.ReadFile("./item-icons.json")
+	content, err := os.ReadFile("./item-constants.json")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var items = make(map[string]string)
+	var items = make(map[string]itemConstants)
 	err = json.Unmarshal(content, &items)
 	if err != nil {
 		log.Fatal(err)

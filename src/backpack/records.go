@@ -75,16 +75,17 @@ func (pd *pricingData) toCache(currencyConversions *flatCurrency) (*PricingDataC
 		for idx, defindex := range item.Defindex {
 			defindexList[idx] = uint(defindex)
 		}
-		itemUrl, ok := itemCache[strconv.Itoa(int(defindexList[0]))] // Because of course just using uint is not good enough for you
+		itemConstant, ok := itemCache[strconv.Itoa(int(defindexList[0]))] // Because of course just using uint is not good enough for you
 		if !ok {
 			log.Printf("Can't decode defindex: %s", itemName)
 			continue
 		}
 
 		cacheItem := ItemDetails{
-			IconUrl:  itemUrl,
-			Defindex: defindexList,
-			Prices:   make(map[Quality]ItemPair),
+			IconUrl:        itemConstant.Url,
+			Defindex:       defindexList,
+			MarketHashName: itemConstant.MarketHashName,
+			Prices:         make(map[Quality]ItemPair),
 		}
 		err := cacheItem.toCache(item.Prices, currencyConversions)
 		if err != nil {
@@ -182,9 +183,10 @@ type PricingDataCache struct {
 }
 
 type ItemDetails struct {
-	IconUrl  string               `json:"icon"`
-	Defindex []uint               `json:"defindex"`
-	Prices   map[Quality]ItemPair `json:"prices"`
+	IconUrl        string               `json:"icon"`
+	Defindex       []uint               `json:"defindex"`
+	MarketHashName string               `json:"marketHashName"`
+	Prices         map[Quality]ItemPair `json:"prices"`
 }
 
 func (id *ItemDetails) toCache(tradable map[string]tradable, currencyConversion *flatCurrency) error {
