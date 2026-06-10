@@ -2,6 +2,12 @@ package backpack
 
 const minimumPriceInCents = 5
 
+const (
+	Metal = "metal"
+	Keys  = "keys"
+	Usd   = "usd"
+)
+
 type currencyData struct {
 	Response struct {
 		Success    int64 `json:"success,omitempty"`
@@ -33,10 +39,12 @@ func (c *currencyData) flatten() *flatCurrency {
 func (c *flatCurrency) toRealPrice(value float64, currency string) uint {
 	var price uint
 	switch currency {
-	case "keys":
+	case Keys:
 		price = uint(c.Keys * value * 100)
-	case "metal":
+	case Metal:
 		price = uint(c.Metal * value * 100)
+	case Usd:
+		price = uint(value * 100)
 	}
 
 	return max(price, minimumPriceInCents)

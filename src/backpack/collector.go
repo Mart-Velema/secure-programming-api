@@ -143,15 +143,9 @@ func getPrice() (*pricingData, error) {
 		return &pricingResponse, fmt.Errorf("unable to get current pricing: %d", response.StatusCode)
 	}
 
-	decoder := json.NewDecoder(response.Body)
-	for {
-		err := decoder.Decode(&pricingResponse)
-
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return &pricingResponse, err
-		}
+	err = json.NewDecoder(response.Body).Decode(&pricingResponse)
+	if err != nil {
+		return &pricingResponse, err
 	}
 
 	return &pricingResponse, nil
@@ -174,15 +168,9 @@ func getCurrency() (*currencyData, error) {
 		return &currencyResponse, fmt.Errorf("unable to get current currency conversions: %d", response.StatusCode)
 	}
 
-	decoder := json.NewDecoder(response.Body)
-	for {
-		err := decoder.Decode(&currencyResponse)
-
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return &currencyResponse, err
-		}
+	err = json.NewDecoder(response.Body).Decode(&currencyResponse)
+	if err != nil {
+		return &currencyResponse, err
 	}
 
 	return &currencyResponse, nil
