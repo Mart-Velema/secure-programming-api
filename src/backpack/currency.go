@@ -37,6 +37,8 @@ func (c *flatCurrency) toRealPrice(value float64, currency string) uint {
 		price = uint(c.Keys * value * 100)
 	case "metal":
 		price = uint(c.Metal * value * 100)
+	case "usd":
+		price = uint(value * 100)
 	}
 
 	return max(price, minimumPriceInCents)

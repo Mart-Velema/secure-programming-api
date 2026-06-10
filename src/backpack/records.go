@@ -71,6 +71,13 @@ func (pd *pricingData) toCache(currencyConversions *flatCurrency) (*PricingDataC
 			log.Printf("Can't find defindexes for: %s", itemName)
 			continue
 		}
+
+		isMetal := false
+		switch itemName {
+		case "Scrap Metal", "Refined Metal", "Reclaimed Metal":
+			isMetal = true
+		}
+
 		var defindexList = make([]uint, len(item.Defindex))
 		for idx, defindex := range item.Defindex {
 			defindexList[idx] = uint(defindex)
@@ -87,7 +94,7 @@ func (pd *pricingData) toCache(currencyConversions *flatCurrency) (*PricingDataC
 			MarketHashName: itemConstant.MarketHashName,
 			Prices:         make(map[Quality]ItemPair),
 		}
-		err := cacheItem.toCache(item.Prices, currencyConversions)
+		err := cacheItem.toCache(item.Prices, currencyConversions, isMetal)
 		if err != nil {
 			log.Printf("Unable to cache item: %s: %s", itemName, err)
 			continue
@@ -95,6 +102,10 @@ func (pd *pricingData) toCache(currencyConversions *flatCurrency) (*PricingDataC
 
 		cache.Items[itemName] = cacheItem
 	}
+
+	fmt.Println(cache.Items["Refined Metal"].Prices[Unique].Craftable)
+	fmt.Println(cache.Items["Reclaimed Metal"].Prices[Unique].Craftable)
+	fmt.Println(cache.Items["Scrap Metal"].Prices[Unique].Craftable)
 
 	return cache, nil
 }
@@ -111,7 +122,7 @@ type tradable struct {
 	} `json:"Tradable"` // EVIL!!!
 }
 
-func parseField(field any, currencyConversions *flatCurrency) (map[uint]uint, error) {
+func parseField(field any, currencyConversions *flatCurrency, isUniqueMetal bool) (map[uint]uint, error) {
 	resultMap := make(map[uint]uint)
 
 	switch v := field.(type) {
@@ -131,6 +142,9 @@ func parseField(field any, currencyConversions *flatCurrency) (map[uint]uint, er
 		result, err := parseOther(v[0])
 		if err != nil {
 			return nil, err
+		}
+		if isUniqueMetal {
+			result.Value *= 20
 		}
 		resultMap[0] = currencyConversions.toRealPrice(result.Value, result.Currency)
 	}
@@ -189,7 +203,7 @@ type ItemDetails struct {
 	Prices         map[Quality]ItemPair `json:"prices"`
 }
 
-func (id *ItemDetails) toCache(tradable map[string]tradable, currencyConversion *flatCurrency) error {
+func (id *ItemDetails) toCache(tradable map[string]tradable, currencyConversion *flatCurrency, isMetal bool) error {
 	for qualityNumber, tradableItem := range tradable {
 		qualityString, ok := qualityMap[qualityNumber]
 		if !ok {
@@ -199,11 +213,15 @@ func (id *ItemDetails) toCache(tradable map[string]tradable, currencyConversion 
 			Craftable:   make(map[uint]uint),
 			Uncraftable: make(map[uint]uint),
 		}
-		err := itemPair.toCache(tradableItem, currencyConversion)
+		isUniqueMetal := false
+		if isMetal && qualityString == Unique {
+			isUniqueMetal = true
+		}
+
+		err := itemPair.toCache(tradableItem, currencyConversion, isUniqueMetal)
 		if err != nil {
 			return err
 		}
-
 		id.Prices[qualityString] = itemPair
 	}
 
@@ -215,14 +233,14 @@ type ItemPair struct {
 	Uncraftable map[uint]uint `json:"non-craftable,omitempty"`
 }
 
-func (ip *ItemPair) toCache(t tradable, currencyConversion *flatCurrency) error {
-	craftableMap, err := parseField(t.Tradable.Craftable, currencyConversion)
+func (ip *ItemPair) toCache(t tradable, currencyConversion *flatCurrency, isUniqueMetal bool) error {
+	craftableMap, err := parseField(t.Tradable.Craftable, currencyConversion, isUniqueMetal)
 	if err != nil {
 		return err
 	}
 	ip.Craftable = craftableMap
 
-	uncraftableMap, err := parseField(t.Tradable.Uncraftable, currencyConversion)
+	uncraftableMap, err := parseField(t.Tradable.Uncraftable, currencyConversion, false)
 	if err != nil {
 		return err
 	}
