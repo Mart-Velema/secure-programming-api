@@ -48,6 +48,15 @@ var qualityMap = map[string]Quality{
 	"15": Decorated,
 }
 
+type multiplier uint
+
+const (
+	None           multiplier = 1
+	ScrapMetal     multiplier = 20
+	RefinedMetal   multiplier = 20
+	ReclaimedMetal multiplier = 20
+)
+
 // API output
 type pricingData struct {
 	Response struct {
@@ -72,10 +81,16 @@ func (pd *pricingData) toCache(currencyConversions *flatCurrency) (*PricingDataC
 			continue
 		}
 
-		isMetal := false
+		var batchSize multiplier
 		switch itemName {
-		case "Scrap Metal", "Refined Metal", "Reclaimed Metal":
-			isMetal = true
+		case "Scrap Metal":
+			batchSize = ScrapMetal
+		case "Refined Metal":
+			batchSize = RefinedMetal
+		case "Reclaimed Metal":
+			batchSize = ReclaimedMetal
+		default:
+			batchSize = None
 		}
 
 		var defindexList = make([]uint, len(item.Defindex))
@@ -94,7 +109,7 @@ func (pd *pricingData) toCache(currencyConversions *flatCurrency) (*PricingDataC
 			MarketHashName: itemConstant.MarketHashName,
 			Prices:         make(map[Quality]ItemPair),
 		}
-		err := cacheItem.toCache(item.Prices, currencyConversions, isMetal)
+		err := cacheItem.toCache(item.Prices, currencyConversions, batchSize)
 		if err != nil {
 			log.Printf("Unable to cache item: %s: %s", itemName, err)
 			continue
@@ -122,7 +137,7 @@ type tradable struct {
 	} `json:"Tradable"` // EVIL!!!
 }
 
-func parseField(field any, currencyConversions *flatCurrency, isUniqueMetal bool) (map[uint]uint, error) {
+func parseField(field any, currencyConversions *flatCurrency, batchSize multiplier) (map[uint]uint, error) {
 	resultMap := make(map[uint]uint)
 
 	switch v := field.(type) {
@@ -132,6 +147,7 @@ func parseField(field any, currencyConversions *flatCurrency, isUniqueMetal bool
 			return nil, err
 		}
 		for idx, rawPrice := range parsed {
+			rawPrice.Value *= float64(batchSize)
 			resultMap[idx] = currencyConversions.toRealPrice(rawPrice.Value, rawPrice.Currency)
 		}
 
@@ -143,9 +159,8 @@ func parseField(field any, currencyConversions *flatCurrency, isUniqueMetal bool
 		if err != nil {
 			return nil, err
 		}
-		if isUniqueMetal {
-			result.Value *= 20
-		}
+
+		result.Value *= float64(batchSize)
 		resultMap[0] = currencyConversions.toRealPrice(result.Value, result.Currency)
 	}
 
@@ -203,7 +218,7 @@ type ItemDetails struct {
 	Prices         map[Quality]ItemPair `json:"prices"`
 }
 
-func (id *ItemDetails) toCache(tradable map[string]tradable, currencyConversion *flatCurrency, isMetal bool) error {
+func (id *ItemDetails) toCache(tradable map[string]tradable, currencyConversion *flatCurrency, batchSize multiplier) error {
 	for qualityNumber, tradableItem := range tradable {
 		qualityString, ok := qualityMap[qualityNumber]
 		if !ok {
@@ -213,12 +228,14 @@ func (id *ItemDetails) toCache(tradable map[string]tradable, currencyConversion 
 			Craftable:   make(map[uint]uint),
 			Uncraftable: make(map[uint]uint),
 		}
-		isUniqueMetal := false
-		if isMetal && qualityString == Unique {
-			isUniqueMetal = true
+
+		// Total hack, will only work if we keep multiplier only for unique items.
+		// But then again, who would want to buy 20 vintage metal for almost $12k...
+		if qualityString != Unique {
+			batchSize = None
 		}
 
-		err := itemPair.toCache(tradableItem, currencyConversion, isUniqueMetal)
+		err := itemPair.toCache(tradableItem, currencyConversion, batchSize)
 		if err != nil {
 			return err
 		}
@@ -233,14 +250,14 @@ type ItemPair struct {
 	Uncraftable map[uint]uint `json:"non-craftable,omitempty"`
 }
 
-func (ip *ItemPair) toCache(t tradable, currencyConversion *flatCurrency, isUniqueMetal bool) error {
-	craftableMap, err := parseField(t.Tradable.Craftable, currencyConversion, isUniqueMetal)
+func (ip *ItemPair) toCache(t tradable, currencyConversion *flatCurrency, batchSize multiplier) error {
+	craftableMap, err := parseField(t.Tradable.Craftable, currencyConversion, batchSize)
 	if err != nil {
 		return err
 	}
 	ip.Craftable = craftableMap
 
-	uncraftableMap, err := parseField(t.Tradable.Uncraftable, currencyConversion, false)
+	uncraftableMap, err := parseField(t.Tradable.Uncraftable, currencyConversion, batchSize)
 	if err != nil {
 		return err
 	}
