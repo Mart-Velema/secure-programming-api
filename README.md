@@ -73,6 +73,9 @@ JWT_REFRESH_DAYS=7 # Time the refresh token is valid in days
 BACKPACK_API_KEY="12345678901234567890abcd" # The Backpack.TF API key
 BACKPACK_API_HASH="sha256:39a999a6d0aad5c4be9ea3c952dd6331d6c14ff2b2c0f1e1e99fb11e8653e78f" # The backpack.tf API hash
 
+# Steam API
+STEAM_API_HASH="sha256:STEAM_API_HASH_HERE" # The Steam API hash
+
 # Steam Bot
 BOT_PORT="3001" # Internal Steam bot port
 STEAM_BOT_URL=http://steam-bot:3001 # Internal URL used by the Go API to communicate with the Steam bot
