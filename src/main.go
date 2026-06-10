@@ -12,6 +12,7 @@ import (
 	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/backpack"
 	"guineatrade.nhlstenden.com/src/database"
+	"guineatrade.nhlstenden.com/src/inventory"
 	"guineatrade.nhlstenden.com/src/steam"
 )
 
@@ -67,10 +68,15 @@ func main() {
 			}
 		}
 		apiRestricted.GET("/backpack/prices", backpack.GetPrices)
-	
+
 		steamGroup := apiRestricted.Group("/steam")
 		{
 			steamGroup.GET("/inventory", steam.GetBotInventory)
+		}
+
+		userGroup := apiRestricted.Group("/user")
+		{
+			userGroup.GET("/inventory/:steamId", inventory.GetInventory)
 		}
 	}
 
