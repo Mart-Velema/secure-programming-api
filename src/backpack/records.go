@@ -231,11 +231,12 @@ func (id *ItemDetails) toCache(tradable map[string]tradable, currencyConversion 
 
 		// Total hack, will only work if we keep multiplier only for unique items.
 		// But then again, who would want to buy 20 vintage metal for almost $12k...
+		uniqueBatchSize := batchSize
 		if qualityString != Unique {
-			batchSize = None
+			uniqueBatchSize = None
 		}
 
-		err := itemPair.toCache(tradableItem, currencyConversion, batchSize)
+		err := itemPair.toCache(tradableItem, currencyConversion, uniqueBatchSize)
 		if err != nil {
 			return err
 		}
