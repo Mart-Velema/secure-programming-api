@@ -14,6 +14,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"guineatrade.nhlstenden.com/src/auth"
+	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/items"
 )
 
@@ -116,9 +118,9 @@ func init() {
 	}
 }
 
-func getInventory(steamID string) (*items.InventoryResponse, error) {
+func getInventory(steamID uint64) (*items.InventoryResponse, error) {
 	url := fmt.Sprintf(
-		"https://steamcommunity.com/inventory/%s/440/2?count=2000&l=english",
+		"https://steamcommunity.com/inventory/%d/440/2?count=2000&l=english",
 		steamID,
 	)
 
@@ -151,9 +153,13 @@ func getInventory(steamID string) (*items.InventoryResponse, error) {
 }
 
 func GetInventory(c *gin.Context) {
-	steamID := c.Param("steamId")
+	user, err := middleware.ExtractTokenUser(c)
+	if err != nil {
+		auth.SendError(c, http.StatusNotFound, err)
+		return
+	}
 
-	inventory, err := getInventory(steamID)
+	inventory, err := getInventory(user.SteamId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),

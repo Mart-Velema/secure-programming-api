@@ -76,7 +76,7 @@ func main() {
 
 		userGroup := apiRestricted.Group("/user")
 		{
-			userGroup.GET("/inventory/:steamId", inventory.GetInventory)
+			userGroup.GET("/inventory", inventory.GetInventory)
 		}
 	}
 
