@@ -8,15 +8,7 @@ function getBotInventory(appId = 440, contextId = 2) {
         return;
       }
 
-      resolve(
-        inventory.map((item) => ({
-          assetId: item.assetid,
-          marketHashName: item.market_hash_name,
-          name: item.name,
-          tradable: item.tradable,
-          marketable: item.marketable,
-        }))
-      );
+      resolve(inventory);
     });
   });
 }
