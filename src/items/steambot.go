@@ -93,7 +93,8 @@ func (s SteamItem) getUnusual() (string, bool) {
 			if len(splits) != 2 {
 				continue
 			}
-			return splits[1], true
+
+			return strings.TrimSpace(splits[1]), true
 		}
 	}
 

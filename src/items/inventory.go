@@ -101,8 +101,12 @@ func (d *Description) getCraftability() bool {
 func (d *Description) getUnusual() (string, bool) {
 	for _, description := range d.Description {
 		if strings.Contains(description.Value, "Unusual") {
-			splits := strings.Split(description.Value, ":")[1]
-			return splits, true
+			splits := strings.Split(description.Value, ":")
+			if len(splits) != 2 {
+				continue
+			}
+
+			return strings.TrimSpace(splits[1]), true
 		}
 	}
 
