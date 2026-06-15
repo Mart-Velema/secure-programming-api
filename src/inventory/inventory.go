@@ -117,7 +117,7 @@ func init() {
 
 func getInventory(steamID string) (*InventoryResponse, error) {
 	url := fmt.Sprintf(
-		"https://steamcommunity.com/inventory/%s/440/2",
+		"https://steamcommunity.com/inventory/%s/440/2?count=2000&l=english",
 		steamID,
 	)
 
@@ -159,5 +159,5 @@ func GetInventory(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(200, inventory)
+	c.JSON(200, inventory.toItem())
 }
