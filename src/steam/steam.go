@@ -1,6 +1,7 @@
 package steam
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"guineatrade.nhlstenden.com/src/items"
 )
 
 func steamBotRequest(method string, path string, body io.Reader) (*[]byte, error) {
@@ -77,13 +79,19 @@ func GetBotInventory(c *gin.Context) {
 		appId,
 		contextId,
 	)
-
-	// TODO: Parse properly
-	_, err := steamBotRequest(http.MethodGet, path, nil)
+	
+	result, err := steamBotRequest(http.MethodGet, path, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	var inventory items.SteamInventoryResponse
+	err = json.Unmarshal(*result, &inventory)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, inventory.ToItems())
 }
 
 func GetTradeOffers(c *gin.Context) {
