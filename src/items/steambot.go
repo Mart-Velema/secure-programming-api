@@ -1,6 +1,7 @@
 package items
 
 import (
+	"fmt"
 	"strings"
 
 	"guineatrade.nhlstenden.com/src/backpack"
@@ -15,15 +16,24 @@ func (s *SteamInventoryResponse) ToItems() Items {
 		Assets: make([]Item, len(s.Inventory)),
 	}
 	for idx, asset := range s.Inventory {
-		itemResult.Assets[idx] = Item{
+		if asset.MarketHashName == "Unusual Taunt: Square Dance" {
+			fmt.Println(asset.MarketHashName)
+		}
+		item := Item{
 			AssetId:        asset.AssetId,
 			InstanceId:     asset.InstanceId,
 			ClassId:        asset.ClassId,
 			MarketHashName: asset.MarketHashName,
 			Craftable:      asset.getCraftability(),
 			Quality:        asset.getType(),
-			Effect:         "Whirly Wind",
 		}
+
+		effect, hasEffect := asset.getUnusual()
+		if hasEffect {
+			item.Effect = effect
+		}
+
+		itemResult.Assets[idx] = item
 	}
 
 	return itemResult
@@ -46,7 +56,7 @@ func (s *SteamItem) getType() backpack.Quality {
 		}
 
 		switch tag.InternalName {
-		case "Rarity4":
+		case "rarity4":
 			return backpack.Unusual
 		case "Unique":
 			return backpack.Unique
@@ -67,4 +77,18 @@ func (s *SteamItem) getCraftability() bool {
 	}
 
 	return true
+}
+
+func (s SteamItem) getUnusual() (string, bool) {
+	for _, description := range s.Descriptions {
+		if strings.Contains(description.Value, "Unusual") {
+			splits := strings.Split(description.Value, ":")
+			if len(splits) != 2 {
+				continue
+			}
+			return splits[1], true
+		}
+	}
+
+	return "", false
 }

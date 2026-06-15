@@ -22,7 +22,7 @@ func (r *InventoryResponse) ToItem() Items {
 	}
 	for idx, asset := range r.Assets {
 		description := descriptions[asset.ClassId]
-		itemResult.Assets[idx] = Item{
+		item := Item{
 			AssetId:        asset.AssetId,
 			InstanceId:     asset.InstanceId,
 			ClassId:        asset.ClassId,
@@ -31,6 +31,13 @@ func (r *InventoryResponse) ToItem() Items {
 			Quality:        description.getType(),
 			Effect:         "Whirly Wind",
 		}
+
+		effect, hasEffect := description.getUnusual()
+		if hasEffect {
+			item.Effect = effect
+		}
+
+		itemResult.Assets[idx] = item
 	}
 
 	return itemResult
@@ -61,7 +68,7 @@ func (d *Description) getType() backpack.Quality {
 		}
 
 		switch tag.InternalName {
-		case "Rarity4":
+		case "rarity4":
 			return backpack.Unusual
 		case "Unique":
 			return backpack.Unique
@@ -82,6 +89,17 @@ func (d *Description) getCraftability() bool {
 	}
 
 	return true
+}
+
+func (d *Description) getUnusual() (string, bool) {
+	for _, description := range d.Description {
+		if strings.Contains(description.Value, "Unusual") {
+			splits := strings.Split(description.Value, ":")[1]
+			return splits, true
+		}
+	}
+
+	return "", false
 }
 
 type Asset struct {
