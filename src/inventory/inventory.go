@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"guineatrade.nhlstenden.com/src/items"
 )
 
 var steamClient *http.Client
@@ -115,7 +116,7 @@ func init() {
 	}
 }
 
-func getInventory(steamID string) (*InventoryResponse, error) {
+func getInventory(steamID string) (*items.InventoryResponse, error) {
 	url := fmt.Sprintf(
 		"https://steamcommunity.com/inventory/%s/440/2?count=2000&l=english",
 		steamID,
@@ -139,7 +140,7 @@ func getInventory(steamID string) (*InventoryResponse, error) {
 		)
 	}
 
-	var inventory InventoryResponse
+	var inventory items.InventoryResponse
 
 	err = json.NewDecoder(response.Body).Decode(&inventory)
 	if err != nil {
@@ -159,5 +160,5 @@ func GetInventory(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(200, inventory.toItem())
+	c.JSON(200, inventory.ToItem())
 }
