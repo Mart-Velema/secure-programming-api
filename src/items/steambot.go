@@ -1,7 +1,6 @@
 package items
 
 import (
-	"fmt"
 	"strings"
 
 	"guineatrade.nhlstenden.com/src/backpack"
@@ -12,12 +11,10 @@ type SteamInventoryResponse struct {
 }
 
 func (s *SteamInventoryResponse) ToItems() Items {
-	itemResult := Items{
-		Assets: make([]Item, len(s.Inventory)),
-	}
-	for idx, asset := range s.Inventory {
-		if asset.MarketHashName == "Unusual Taunt: Square Dance" {
-			fmt.Println(asset.MarketHashName)
+	itemResult := Items{}
+	for _, asset := range s.Inventory {
+		if !asset.Tradable {
+			continue
 		}
 		defindex := backpack.GetDefindex(asset.MarketHashName)
 		if defindex == 0 {
@@ -40,7 +37,7 @@ func (s *SteamInventoryResponse) ToItems() Items {
 			item.Effect = effect
 		}
 
-		itemResult.Assets[idx] = item
+		itemResult.Assets = append(itemResult.Assets, item)
 	}
 
 	return itemResult

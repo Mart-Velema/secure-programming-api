@@ -17,11 +17,13 @@ func (r *InventoryResponse) ToItem() Items {
 	for _, description := range r.Descriptions {
 		descriptions[description.ClassId] = &description
 	}
-	itemResult := Items{
-		Assets: make([]Item, len(r.Assets)),
-	}
-	for idx, asset := range r.Assets {
+	itemResult := Items{}
+	for _, asset := range r.Assets {
 		description := descriptions[asset.ClassId]
+
+		if description.Tradable != 1 {
+			continue
+		}
 
 		defindex := backpack.GetDefindex(description.MarketHashName)
 		if defindex == 0 {
@@ -44,7 +46,7 @@ func (r *InventoryResponse) ToItem() Items {
 			item.Effect = effect
 		}
 
-		itemResult.Assets[idx] = item
+		itemResult.Assets = append(itemResult.Assets, item)
 	}
 
 	return itemResult
@@ -55,6 +57,7 @@ type Description struct {
 	ClassId        string             `json:"classid"`
 	InstanceId     string             `json:"instanceid"`
 	MarketHashName string             `json:"market_hash_name"`
+	Tradable       int8               `json:"tradable"`
 	Tags           []Tag              `json:"tags"`
 	Description    []MetaDescriptions `json:"descriptions"`
 }

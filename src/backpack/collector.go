@@ -217,6 +217,9 @@ func installItemCache() {
 		if err != nil {
 			continue
 		}
+		if _, ok := defindexCache[constants.MarketHashName]; ok {
+			continue
+		}
 		defindexCache[constants.MarketHashName] = uint32(defindex)
 		defindexCache[fmt.Sprintf("The %s", constants.MarketHashName)] = uint32(defindex)
 	}
