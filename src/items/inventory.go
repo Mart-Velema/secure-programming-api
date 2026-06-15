@@ -22,14 +22,21 @@ func (r *InventoryResponse) ToItem() Items {
 	}
 	for idx, asset := range r.Assets {
 		description := descriptions[asset.ClassId]
+
+		defindex := backpack.GetDefindex(description.MarketHashName)
+		if defindex == 0 {
+			continue
+		}
+		marketHashName := backpack.GetMarketHashName(defindex)
+
 		item := Item{
 			AssetId:        asset.AssetId,
 			InstanceId:     asset.InstanceId,
 			ClassId:        asset.ClassId,
-			MarketHashName: description.MarketHashName,
+			MarketHashName: marketHashName,
+			Defindex:       defindex,
 			Craftable:      description.getCraftability(),
 			Quality:        description.getType(),
-			Effect:         "Whirly Wind",
 		}
 
 		effect, hasEffect := description.getUnusual()

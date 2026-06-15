@@ -10,6 +10,7 @@ type Item struct {
 	AssetId        string           `json:"assetid"`
 	InstanceId     string           `json:"instanceid"`
 	ClassId        string           `json:"classid"`
+	Defindex       uint32           `json:"defindex"`
 	MarketHashName string           `json:"marketHashName"`
 	Craftable      bool             `json:"craftability"`
 	Quality        backpack.Quality `json:"quality"`

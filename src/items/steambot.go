@@ -19,11 +19,18 @@ func (s *SteamInventoryResponse) ToItems() Items {
 		if asset.MarketHashName == "Unusual Taunt: Square Dance" {
 			fmt.Println(asset.MarketHashName)
 		}
+		defindex := backpack.GetDefindex(asset.MarketHashName)
+		if defindex == 0 {
+			continue
+		}
+		marketHashName := backpack.GetMarketHashName(defindex)
+
 		item := Item{
 			AssetId:        asset.AssetId,
 			InstanceId:     asset.InstanceId,
 			ClassId:        asset.ClassId,
-			MarketHashName: asset.MarketHashName,
+			MarketHashName: marketHashName,
+			Defindex:       defindex,
 			Craftable:      asset.getCraftability(),
 			Quality:        asset.getType(),
 		}
