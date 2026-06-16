@@ -13,6 +13,8 @@ import (
 	"guineatrade.nhlstenden.com/src/backpack"
 	"guineatrade.nhlstenden.com/src/database"
 	"guineatrade.nhlstenden.com/src/stripe"
+	"guineatrade.nhlstenden.com/src/inventory"
+	"guineatrade.nhlstenden.com/src/steam"
 )
 
 func HelloWorld(c *gin.Context) {
@@ -62,6 +64,7 @@ func main() {
 			authGroup.POST("/logout/all", auth.LogoutAll)
 			authGroup.GET("/me", auth.Me)
 			authGroup.PATCH("/me", auth.UpdatePassword)
+			authGroup.PATCH("/steam", auth.UpdateSteam)
 
 			multifactorAuthGroup := authGroup.Group("/mfa")
 			{
@@ -70,11 +73,16 @@ func main() {
 				multifactorAuthGroup.DELETE("/totp/reset", mfa.ResetTOTP)
 			}
 		}
-		backpackGroup := apiRestricted.Group("/backpack")
+		apiRestricted.GET("/backpack/prices", backpack.GetPrices)
+
+		steamGroup := apiRestricted.Group("/steam")
 		{
-			backpackGroup.GET("/prices", backpack.GetPrices)
-			backpackGroup.GET("/prices/:item", backpack.GetItemDetails)
-			backpackGroup.GET("/currency", backpack.GetCurrencies)
+			steamGroup.GET("/inventory", steam.GetBotInventory)
+		}
+
+		userGroup := apiRestricted.Group("/user")
+		{
+			userGroup.GET("/inventory", inventory.GetInventory)
 		}
 		stripeGroup := apiRestricted.Group("/stripe")
 		{

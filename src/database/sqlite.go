@@ -26,6 +26,8 @@ type User struct {
 	EmailHash    string         `json:"-" hash:"Email" gorm:"unique"`
 	Password     string         `json:"password" hash:"Password"`
 	Balance      int64          `json:"-" gorm:"default:0"`
+	SteamId      uint64         `json:"steamId"`
+	TradeUrl     string         `json:"tradeUrl" encrypt:"true"`
 	TotpSecret   string         `encrypt:"true"`
 	RecoveryCode string         `hash:"true"`
 	Trades       []Trade        `gorm:"foreignKey:UserID"`
@@ -38,15 +40,19 @@ func (u User) HasMFAEnabled() bool {
 
 func (u User) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Name    string `json:"name"`
-		Email   string `json:"email"`
-		Balance int64  `json:"balance"`
-		HasMFA  bool   `json:"mfaEnabled"`
+		Name     string `json:"name"`
+		Email    string `json:"email"`
+		Balance  int64  `json:"balance"`
+		HasMFA   bool   `json:"mfaEnabled"`
+		SteamId  uint64 `json:"steamId"`
+		TradeUrl string `json:"tradeUrl"`
 	}{
-		Name:    u.Name,
-		Email:   u.Email,
-		Balance: u.Balance,
-		HasMFA:  u.HasMFAEnabled(),
+		Name:     u.Name,
+		Email:    u.Email,
+		Balance:  u.Balance,
+		HasMFA:   u.HasMFAEnabled(),
+		SteamId:  u.SteamId,
+		TradeUrl: u.TradeUrl,
 	})
 }
 

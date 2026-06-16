@@ -27,6 +27,11 @@ type patchUser struct {
 	NewPasswordVerify string `json:"newPasswordVerify"`
 }
 
+type patchSteam struct {
+	TradeUrl string `json:"tradeUrl"`
+	SteamId  uint64 `json:"steamId"`
+}
+
 func (user *registerUser) toDatabaseRecord() database.User {
 	return database.User{
 		Name:     user.Name,
@@ -218,6 +223,33 @@ func UpdatePassword(c *gin.Context) {
 	}
 
 	c.Status(http.StatusAccepted)
+}
+
+func UpdateSteam(c *gin.Context) {
+	user, err := middleware.ExtractTokenUser(c)
+	if err != nil {
+		SendError(c, http.StatusNotFound, err)
+		return
+	}
+
+	var steamPatch patchSteam
+	if err := c.ShouldBindJSON(&steamPatch); err != nil {
+		SendError(c, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	user.TradeUrl = steamPatch.TradeUrl
+	user.SteamId = steamPatch.SteamId
+
+	if result := database.
+		GetInstance().
+		Select("steam_id", "trade_url").
+		Save(&user); result.Error != nil {
+		SendError(c, http.StatusUnprocessableEntity, result.Error)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func isEmailValid(e string) bool {

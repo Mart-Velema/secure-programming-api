@@ -1,0 +1,11 @@
+FROM node:current-alpine3.23
+
+WORKDIR /app
+
+COPY steam-bot/package*.json ./
+RUN npm install
+RUN npm ci --omit=dev
+
+COPY steam-bot/src ./src
+
+CMD ["npm", "start"]

@@ -1,6 +1,7 @@
 package backpack
 
 import (
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -9,6 +10,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -21,21 +24,16 @@ const (
 var (
 	apiKey        string
 	PricingCache  PricingDataCache
-	CurrencyCache CurrencyDataCache
-	itemCache     map[string]string
+	itemCache     map[string]itemConstants
+	defindexCache map[string]uint32
 )
 
-var client = http.Client{
-	Transport: &http.Transport{
-		MaxIdleConns:    30,
-		MaxConnsPerHost: 10,
-		IdleConnTimeout: 30 * time.Second,
-		TLSClientConfig: &tls.Config{
-			ServerName:         "backpack.tf",
-			InsecureSkipVerify: false,
-		},
-	},
+type itemConstants struct {
+	Url            string `json:"url"`
+	MarketHashName string `json:"marketHashName"`
 }
+
+var client *http.Client
 
 func init() {
 	err := godotenv.Load()
@@ -43,9 +41,33 @@ func init() {
 		log.Fatalf("Error loading .env file: %s\n", err)
 	}
 	envApiKey, apiKeyExists := os.LookupEnv("BACKPACK_API_KEY")
+	envApiHash, apiHashExists := os.LookupEnv("BACKPACK_API_HASH")
 
-	if !apiKeyExists {
-		log.Fatal("BACKPACK_API_KEY is unset")
+	if !apiKeyExists || !apiHashExists {
+		log.Fatal("BACKPACK_API_KEY or BACKPACK_API_HASH is unset")
+	}
+	client = &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:    30,
+			MaxConnsPerHost: 10,
+			IdleConnTimeout: 30 * time.Second,
+			TLSClientConfig: &tls.Config{
+				ServerName:         "backpack.tf",
+				InsecureSkipVerify: false,
+				VerifyConnection: func(cs tls.ConnectionState) error {
+					if len(cs.PeerCertificates) == 0 {
+						return fmt.Errorf("no certificates provided by server")
+					}
+					cert := cs.PeerCertificates[0]
+					pubKeyHash := sha256.Sum256(cert.RawSubjectPublicKeyInfo)
+					actualHash := fmt.Sprintf("sha256:%x", pubKeyHash)
+					if actualHash != envApiHash {
+						return fmt.Errorf("public key hash mismatch: expected %s, got %s", envApiHash, actualHash)
+					}
+					return nil
+				},
+			},
+		},
 	}
 
 	apiKey = envApiKey
@@ -90,8 +112,10 @@ func init() {
 	go func() {
 		installItemCache()
 		for {
-			updatePriceCache()
-			updateCurrencyCache()
+			err := updatePriceCache()
+			if err != nil {
+				log.Printf("using old cache: %s", err)
+			}
 			now := time.Now().Truncate(time.Hour)
 
 			timeTillNextUpdate := 6 - (now.Hour() % 6)
@@ -122,15 +146,9 @@ func getPrice() (*pricingData, error) {
 		return &pricingResponse, fmt.Errorf("unable to get current pricing: %d", response.StatusCode)
 	}
 
-	decoder := json.NewDecoder(response.Body)
-	for {
-		err := decoder.Decode(&pricingResponse)
-
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return &pricingResponse, err
-		}
+	err = json.NewDecoder(response.Body).Decode(&pricingResponse)
+	if err != nil {
+		return &pricingResponse, err
 	}
 
 	return &pricingResponse, nil
@@ -153,59 +171,73 @@ func getCurrency() (*currencyData, error) {
 		return &currencyResponse, fmt.Errorf("unable to get current currency conversions: %d", response.StatusCode)
 	}
 
-	decoder := json.NewDecoder(response.Body)
-	for {
-		err := decoder.Decode(&currencyResponse)
-
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return &currencyResponse, err
-		}
+	err = json.NewDecoder(response.Body).Decode(&currencyResponse)
+	if err != nil {
+		return &currencyResponse, err
 	}
 
 	return &currencyResponse, nil
 }
 
-func updatePriceCache() {
+func updatePriceCache() error {
 	priceResult, err := getPrice()
 	if err != nil {
-		log.Println(err)
-		return
+		return err
 	}
-	priceCache, err := priceResult.toCache()
+	currencyResult, err := getCurrency()
 	if err != nil {
-		log.Println(err)
-		log.Println("Using old cache")
-		return
+		return err
+	}
+	priceCache, err := priceResult.toCache(currencyResult.flatten())
+	if err != nil {
+		return err
 	}
 	PricingCache = *priceCache
 	log.Printf("Updated Price cache on %s", time.Now().String())
-}
-
-func updateCurrencyCache() {
-	priceResult, err := getCurrency()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	currencyCache := priceResult.toCache()
-
-	CurrencyCache = *currencyCache
-	log.Printf("Updated Currency cache on %s", time.Now().String())
+	return nil
 }
 
 func installItemCache() {
-	content, err := os.ReadFile("./item-icons.json")
+	content, err := os.ReadFile("./item-constants.json")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var items = make(map[string]string)
+	var items = make(map[string]itemConstants)
 	err = json.Unmarshal(content, &items)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	itemCache = items
+	defindexCache = make(map[string]uint32)
+
+	for s, constants := range items {
+		defindex, err := strconv.Atoi(s)
+		if err != nil {
+			continue
+		}
+		if _, ok := defindexCache[constants.MarketHashName]; ok {
+			continue
+		}
+		defindexCache[constants.MarketHashName] = uint32(defindex)
+		defindexCache[fmt.Sprintf("The %s", constants.MarketHashName)] = uint32(defindex)
+	}
+}
+
+func GetDefindex(itemName string) uint32 {
+	if defindex, ok := defindexCache[itemName]; ok {
+		return defindex
+	}
+
+	trimmed := strings.TrimPrefix(itemName, "Unusual ")
+	trimmed = strings.TrimPrefix(trimmed, "Strange ")
+
+	return defindexCache[trimmed]
+}
+
+func GetMarketHashName(defindex uint32) string {
+	defindexString := strconv.Itoa(int(defindex))
+
+	return itemCache[defindexString].MarketHashName
 }
