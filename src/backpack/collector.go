@@ -10,6 +10,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -20,9 +22,10 @@ const (
 )
 
 var (
-	apiKey       string
-	PricingCache PricingDataCache
-	itemCache    map[string]itemConstants
+	apiKey        string
+	PricingCache  PricingDataCache
+	itemCache     map[string]itemConstants
+	defindexCache map[string]uint32
 )
 
 type itemConstants struct {
@@ -207,4 +210,34 @@ func installItemCache() {
 	}
 
 	itemCache = items
+	defindexCache = make(map[string]uint32)
+
+	for s, constants := range items {
+		defindex, err := strconv.Atoi(s)
+		if err != nil {
+			continue
+		}
+		if _, ok := defindexCache[constants.MarketHashName]; ok {
+			continue
+		}
+		defindexCache[constants.MarketHashName] = uint32(defindex)
+		defindexCache[fmt.Sprintf("The %s", constants.MarketHashName)] = uint32(defindex)
+	}
+}
+
+func GetDefindex(itemName string) uint32 {
+	if defindex, ok := defindexCache[itemName]; ok {
+		return defindex
+	}
+
+	trimmed := strings.TrimPrefix(itemName, "Unusual ")
+	trimmed = strings.TrimPrefix(trimmed, "Strange ")
+
+	return defindexCache[trimmed]
+}
+
+func GetMarketHashName(defindex uint32) string {
+	defindexString := strconv.Itoa(int(defindex))
+
+	return itemCache[defindexString].MarketHashName
 }

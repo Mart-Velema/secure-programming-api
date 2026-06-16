@@ -97,7 +97,8 @@ func (pd *pricingData) toCache(currencyConversions *flatCurrency) (*PricingDataC
 		for idx, defindex := range item.Defindex {
 			defindexList[idx] = uint(defindex)
 		}
-		itemConstant, ok := itemCache[strconv.Itoa(int(defindexList[0]))] // Because of course just using uint is not good enough for you
+		stringDefindex := strconv.Itoa(int(defindexList[0]))
+		itemConstant, ok := itemCache[stringDefindex]
 		if !ok {
 			log.Printf("Can't decode defindex: %s", itemName)
 			continue
@@ -115,12 +116,8 @@ func (pd *pricingData) toCache(currencyConversions *flatCurrency) (*PricingDataC
 			continue
 		}
 
-		cache.Items[itemName] = cacheItem
+		cache.Items[itemConstant.MarketHashName] = cacheItem
 	}
-
-	fmt.Println(cache.Items["Refined Metal"].Prices[Unique].Craftable)
-	fmt.Println(cache.Items["Reclaimed Metal"].Prices[Unique].Craftable)
-	fmt.Println(cache.Items["Scrap Metal"].Prices[Unique].Craftable)
 
 	return cache, nil
 }

@@ -2,30 +2,15 @@ package steam
 
 import "time"
 
-type SteamInventoryResponse struct {
-	AppID     int         `json:"appId"`
-	ContextID string      `json:"contextId"`
-	Count     int         `json:"count"`
-	Inventory []SteamItem `json:"inventory"`
-}
-
-type SteamItem struct {
-	AssetID        string `json:"assetId"`
-	MarketHashName string `json:"marketHashName"`
-	Name           string `json:"name"`
-	Tradable       bool   `json:"tradable"`
-	Marketable     bool   `json:"marketable"`
-}
-
 type SendTradeOfferRequest struct {
-	TradeURL    string             `json:"tradeUrl"`
-	ItemsToGive []TradeOfferItem   `json:"itemsToGive"`
-	Message     string             `json:"message"`
+	TradeURL    string           `json:"tradeUrl"`
+	ItemsToGive []TradeOfferItem `json:"itemsToGive"`
+	Message     string           `json:"message"`
 }
 
 type TradeOfferItem struct {
 	AppID     int    `json:"appId"`
-	ContextID string    `json:"contextId"`
+	ContextID string `json:"contextId"`
 	AssetID   string `json:"assetId"`
 }
 
@@ -43,14 +28,14 @@ type TradeOfferResponse struct {
 }
 
 type TradeOffer struct {
-	ID             string           `json:"id"`
-	State          int              `json:"state"`
-	StateName      string           `json:"stateName"`
-	Partner        string           `json:"partner"`
-	Message        string           `json:"message"`
-	Created        time.Time        `json:"created"`
-	Updated        time.Time        `json:"updated"`
-	Expires        time.Time        `json:"expires"`
+	ID             string            `json:"id"`
+	State          int               `json:"state"`
+	StateName      string            `json:"stateName"`
+	Partner        string            `json:"partner"`
+	Message        string            `json:"message"`
+	Created        time.Time         `json:"created"`
+	Updated        time.Time         `json:"updated"`
+	Expires        time.Time         `json:"expires"`
 	ItemsToGive    []TradeOfferAsset `json:"itemsToGive"`
 	ItemsToReceive []TradeOfferAsset `json:"itemsToReceive"`
 }
@@ -63,10 +48,10 @@ type TradeOfferAsset struct {
 }
 
 type TradeOfferListResponse struct {
-	OK       bool             `json:"ok"`
+	OK       bool              `json:"ok"`
 	Sent     []TradeOfferBrief `json:"sent"`
 	Received []TradeOfferBrief `json:"received"`
-	Error    string           `json:"error,omitempty"`
+	Error    string            `json:"error,omitempty"`
 }
 
 type TradeOfferBrief struct {

@@ -1,16 +1,18 @@
 package steam
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
-	"log"
 
 	"github.com/gin-gonic/gin"
+	"guineatrade.nhlstenden.com/src/items"
 )
 
-func steamBotRequest(c *gin.Context, method string, path string, body io.Reader) {
+func steamBotRequest(method string, path string, body io.Reader) (*[]byte, error) {
 	botURL := os.Getenv("STEAM_BOT_URL")
 	botAPIKey := os.Getenv("BOT_API_KEY")
 
@@ -18,8 +20,7 @@ func steamBotRequest(c *gin.Context, method string, path string, body io.Reader)
 
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return nil, err
 	}
 
 	req.Header.Set("X-API-Key", botAPIKey)
@@ -30,27 +31,29 @@ func steamBotRequest(c *gin.Context, method string, path string, body io.Reader)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
-		return
+		return nil, err
 	}
 	defer func(Body io.ReadCloser) {
-        err := Body.Close()
-        if err != nil {
-            log.Println(err)
-        }
-    }(resp.Body)
+		err := Body.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(resp.Body)
 
 	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &responseBody, nil
+}
+
+func GetBotStatus(c *gin.Context) {
+	_, err := steamBotRequest(http.MethodGet, "/steam/status", nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	c.Data(resp.StatusCode, "application/json", responseBody)
-}
-
-func GetBotStatus(c *gin.Context) {
-	steamBotRequest(c, http.MethodGet, "/steam/status", nil)
 }
 
 func GetBotInventory(c *gin.Context) {
@@ -76,16 +79,35 @@ func GetBotInventory(c *gin.Context) {
 		appId,
 		contextId,
 	)
-
-	steamBotRequest(c, http.MethodGet, path, nil)
+	
+	result, err := steamBotRequest(http.MethodGet, path, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	var inventory items.SteamInventoryResponse
+	err = json.Unmarshal(*result, &inventory)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, inventory.ToItems())
 }
 
 func GetTradeOffers(c *gin.Context) {
-	steamBotRequest(c, http.MethodGet, "/steam/trade-offers", nil)
+	_, err := steamBotRequest(http.MethodGet, "/steam/trade-offers", nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 }
 
 func GetTradeOfferHistory(c *gin.Context) {
-	steamBotRequest(c, http.MethodGet, "/steam/trade-offers/history", nil)
+	_, err := steamBotRequest(http.MethodGet, "/steam/trade-offers/history", nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 }
 
 func GetTradeOffer(c *gin.Context) {
@@ -96,11 +118,19 @@ func GetTradeOffer(c *gin.Context) {
 		tradeOfferId,
 	)
 
-	steamBotRequest(c, http.MethodGet, path, nil)
+	_, err := steamBotRequest(http.MethodGet, path, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 }
 
 func SendTradeOffer(c *gin.Context) {
-	steamBotRequest(c, http.MethodPost, "/steam/trade-offers", c.Request.Body)
+	_, err := steamBotRequest(http.MethodPost, "/steam/trade-offers", c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 }
 
 func AcceptTradeOffer(c *gin.Context) {
@@ -111,7 +141,11 @@ func AcceptTradeOffer(c *gin.Context) {
 		tradeOfferId,
 	)
 
-	steamBotRequest(c, http.MethodPost, path, nil)
+	_, err := steamBotRequest(http.MethodPost, path, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 }
 
 func CancelTradeOffer(c *gin.Context) {
@@ -122,5 +156,9 @@ func CancelTradeOffer(c *gin.Context) {
 		tradeOfferId,
 	)
 
-	steamBotRequest(c, http.MethodPost, path, nil)
+	_, err := steamBotRequest(http.MethodPost, path, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 }
