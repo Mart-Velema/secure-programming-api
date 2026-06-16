@@ -134,8 +134,8 @@ type tradable struct {
 	} `json:"Tradable"` // EVIL!!!
 }
 
-func parseField(field any, currencyConversions *flatCurrency, batchSize multiplier) (map[uint]uint, error) {
-	resultMap := make(map[uint]uint)
+func parseField(field any, currencyConversions *flatCurrency, batchSize multiplier) (map[string]uint, error) {
+	resultMap := make(map[string]uint)
 
 	switch v := field.(type) {
 	case map[string]any:
@@ -145,7 +145,10 @@ func parseField(field any, currencyConversions *flatCurrency, batchSize multipli
 		}
 		for idx, rawPrice := range parsed {
 			rawPrice.Value *= float64(batchSize)
-			resultMap[idx] = currencyConversions.toRealPrice(rawPrice.Value, rawPrice.Currency)
+			name, exists := unusualCache[strconv.Itoa(int(idx))]
+			if exists {
+				resultMap[name] = currencyConversions.toRealPrice(rawPrice.Value, rawPrice.Currency)
+			}
 		}
 
 	case []any:
@@ -158,7 +161,7 @@ func parseField(field any, currencyConversions *flatCurrency, batchSize multipli
 		}
 
 		result.Value *= float64(batchSize)
-		resultMap[0] = currencyConversions.toRealPrice(result.Value, result.Currency)
+		resultMap["0"] = currencyConversions.toRealPrice(result.Value, result.Currency)
 	}
 
 	return resultMap, nil
@@ -222,8 +225,8 @@ func (id *ItemDetails) toCache(tradable map[string]tradable, currencyConversion 
 			return fmt.Errorf("unknown quality number: %s", qualityNumber)
 		}
 		itemPair := ItemPair{
-			Craftable:   make(map[uint]uint),
-			Uncraftable: make(map[uint]uint),
+			Craftable:   make(map[string]uint),
+			Uncraftable: make(map[string]uint),
 		}
 
 		// Total hack, will only work if we keep multiplier only for unique items.
@@ -244,8 +247,8 @@ func (id *ItemDetails) toCache(tradable map[string]tradable, currencyConversion 
 }
 
 type ItemPair struct {
-	Craftable   map[uint]uint `json:"craftable,omitempty"`
-	Uncraftable map[uint]uint `json:"non-craftable,omitempty"`
+	Craftable   map[string]uint `json:"craftable,omitempty"`
+	Uncraftable map[string]uint `json:"non-craftable,omitempty"`
 }
 
 func (ip *ItemPair) toCache(t tradable, currencyConversion *flatCurrency, batchSize multiplier) error {
