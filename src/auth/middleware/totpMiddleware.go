@@ -13,21 +13,21 @@ func TotpMiddlewareAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, err := ExtractTokenUser(c)
 		if err != nil {
-			c.Status(http.StatusUnauthorized)
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
 			c.Abort()
 			return
 		}
 		passcode, err := ExtractTOTP(c)
 		if err != nil {
-			c.Status(http.StatusUnauthorized)
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "No MFA supplied"})
 			c.Abort()
 			return
 		}
 
 		database.GetInstance().First(&user)
 
-		if totp.Validate(passcode, user.TotpSecret) {
-			c.Status(http.StatusUnauthorized)
+		if !totp.Validate(passcode, user.TotpSecret) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "MFA token is invalid"})
 			c.Abort()
 			return
 		}
