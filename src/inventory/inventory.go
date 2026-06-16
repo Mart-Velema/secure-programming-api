@@ -166,5 +166,5 @@ func GetInventory(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(200, inventory.ToItem())
+	c.JSON(200, inventory.ToItem().Assets)
 }

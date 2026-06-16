@@ -79,7 +79,7 @@ func GetBotInventory(c *gin.Context) {
 		appId,
 		contextId,
 	)
-	
+
 	result, err := steamBotRequest(http.MethodGet, path, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -91,7 +91,7 @@ func GetBotInventory(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, inventory.ToItems())
+	c.JSON(http.StatusOK, inventory.ToItems().Assets)
 }
 
 func GetTradeOffers(c *gin.Context) {
