@@ -4,12 +4,10 @@ import (
 	"crypto"
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
-	"guineatrade.nhlstenden.com/src/auth"
 	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/database"
 )
@@ -22,7 +20,7 @@ type TotpCodes struct {
 func RegisterTOTP(c *gin.Context) {
 	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
-		auth.SendError(c, http.StatusNotFound, err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
 		return
 	}
 
@@ -46,19 +44,19 @@ func RegisterTOTP(c *gin.Context) {
 func VerifyTOTP(c *gin.Context) {
 	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
-		auth.SendError(c, http.StatusNotFound, err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Token expired"})
 		return
 	}
 	passcode, err := middleware.ExtractTOTP(c)
 	if err != nil {
-		auth.SendError(c, http.StatusUnauthorized, err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "No MFA supplied"})
 		return
 	}
 
 	database.GetInstance().First(&user)
 
 	if !totp.Validate(passcode, user.TotpSecret) {
-		auth.SendError(c, http.StatusUnauthorized, errors.New("invalid code"))
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid MFA"})
 		return
 	}
 
@@ -68,7 +66,7 @@ func VerifyTOTP(c *gin.Context) {
 func ResetTOTP(c *gin.Context) {
 	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
-		auth.SendError(c, http.StatusNotFound, err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
 		return
 	}
 	database.GetInstance().First(&user)
@@ -76,16 +74,16 @@ func ResetTOTP(c *gin.Context) {
 	passcode, err := middleware.ExtractTOTP(c)
 	if err == nil {
 		if !totp.Validate(passcode, user.TotpSecret) {
-			auth.SendError(c, http.StatusUnauthorized, errors.New("invalid code"))
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid MFA"})
 			return
 		}
 	} else {
 		recoveryCode, err := middleware.ExtractRecoveryCode(c)
 		if err != nil {
-			c.Status(http.StatusUnauthorized)
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "No recovery or TOTP code supplied"})
 		}
 		if recoveryCode != user.RecoveryCode {
-			auth.SendError(c, http.StatusUnauthorized, errors.New("recovery code does not match"))
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid recovery code"})
 			return
 		}
 	}
