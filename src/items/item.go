@@ -3,7 +3,7 @@ package items
 import "guineatrade.nhlstenden.com/src/backpack"
 
 type Items struct {
-	Assets []Item `json:"assets"`
+	Assets []Item
 }
 
 type Item struct {

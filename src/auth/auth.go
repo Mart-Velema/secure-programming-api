@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"errors"
 	"net/http"
 	"regexp"
 	"time"
@@ -48,20 +47,20 @@ type Tokens struct {
 func Register(c *gin.Context) {
 	var postRegister registerUser
 	if err := c.ShouldBindJSON(&postRegister); err != nil {
-		SendError(c, http.StatusUnprocessableEntity, err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid input data"})
 		return
 	}
 	if !isEmailValid(postRegister.Email) {
-		SendError(c, http.StatusUnprocessableEntity, errors.New("supplied email address is not valid"))
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Email is not valid"})
 		return
 	}
 	if postRegister.Password != postRegister.PasswordVerify {
-		SendError(c, http.StatusUnprocessableEntity, errors.New("supplied passwords do not match"))
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Passwords do not match"})
 		return
 	}
 
 	if result := database.GetInstance().Create(new(postRegister.toDatabaseRecord())); result.Error != nil {
-		SendError(c, http.StatusInternalServerError, result.Error)
+		c.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
 		return
 	}
 	c.Status(http.StatusCreated)
@@ -70,7 +69,7 @@ func Register(c *gin.Context) {
 func Login(c *gin.Context) {
 	var user database.User
 	if err := c.ShouldBindJSON(&user); err != nil {
-		SendError(c, http.StatusUnprocessableEntity, err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid input data"})
 		return
 	}
 
@@ -78,18 +77,18 @@ func Login(c *gin.Context) {
 		Where("email_hash = ?", encryption.Hash(user.Email)).
 		Where("password = ?", encryption.Hash(user.Password)).
 		First(&user); result.Error != nil {
-		SendError(c, http.StatusNotFound, result.Error)
+		c.JSON(http.StatusNotFound, gin.H{"error": "User does not exist"})
 		return
 	}
 
 	JWT, err := middleware.GenerateToken(&user)
 	if err != nil {
-		SendError(c, http.StatusUnauthorized, err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unable to generate token"})
 		return
 	}
 	refreshToken, err := middleware.GenerateRefreshToken(&user, c)
 	if err != nil {
-		SendError(c, http.StatusInternalServerError, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token"})
 		return
 	}
 
@@ -102,7 +101,7 @@ func Login(c *gin.Context) {
 func Refresh(c *gin.Context) {
 	var refreshToken Tokens
 	if err := c.ShouldBindJSON(&refreshToken); err != nil {
-		SendError(c, http.StatusUnprocessableEntity, err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid input data"})
 		return
 	}
 
@@ -111,23 +110,23 @@ func Refresh(c *gin.Context) {
 		Joins("User").
 		Where("refresh_tokens.token_hash = ?", encryption.Hash(refreshToken.Refresh)).
 		First(&token); result.Error != nil {
-		SendError(c, http.StatusNotFound, result.Error)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Token does not exist"})
 		return
 	}
 
 	if time.Now().After(token.ExpiresOn) {
 		database.GetInstance().Delete(&token)
-		SendError(c, http.StatusUnauthorized, errors.New("login expired"))
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token is expired"})
 		return
 	}
 	if token.Nonce != middleware.GenerateTokenNonce(c) {
-		SendError(c, http.StatusUnauthorized, errors.New("logged in from another location"))
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token is used from another location"})
 		return
 	}
 
 	jwt, err := middleware.GenerateToken(&token.User)
 	if err != nil {
-		SendError(c, http.StatusUnauthorized, err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unable to generate token"})
 		return
 	}
 
@@ -139,12 +138,12 @@ func Refresh(c *gin.Context) {
 func Logout(c *gin.Context) {
 	var refreshToken Tokens
 	if err := c.ShouldBindJSON(&refreshToken); err != nil {
-		SendError(c, http.StatusUnprocessableEntity, err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid input data"})
 		return
 	}
 
 	if result := database.GetInstance().Delete(&refreshToken.Refresh); result.Error != nil {
-		SendError(c, http.StatusNotFound, result.Error)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Cannot find logout credentials"})
 		return
 	}
 
@@ -154,14 +153,14 @@ func Logout(c *gin.Context) {
 func LogoutAll(c *gin.Context) {
 	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
-		SendError(c, http.StatusNotFound, err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
 		return
 	}
 
 	if result := database.GetInstance().
 		Where("user_id = ?", &user.ID).
 		Delete(&database.RefreshToken{}); result.Error != nil {
-		SendError(c, http.StatusNotFound, result.Error)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Cannot find logout credentials"})
 		return
 	}
 
@@ -171,7 +170,7 @@ func LogoutAll(c *gin.Context) {
 func Me(c *gin.Context) {
 	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
-		SendError(c, http.StatusNotFound, err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
 		return
 	}
 
@@ -179,35 +178,31 @@ func Me(c *gin.Context) {
 }
 
 func UpdatePassword(c *gin.Context) {
-	var requestUser patchUser
-	if err := c.ShouldBindJSON(&requestUser); err != nil {
-		SendError(c, http.StatusUnprocessableEntity, err)
+	user, err := middleware.ExtractTokenUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
 		return
 	}
 
-	var user database.User
-	if result := database.GetInstance().
-		Where("email_hash = ?", encryption.Hash(requestUser.Email)).
-		Where("password = ?", encryption.Hash(requestUser.CurrentPassword)).
-		First(&user); result.Error != nil {
-		SendError(c, http.StatusNotFound, result.Error)
+	var requestUser patchUser
+	if err := c.ShouldBindJSON(&requestUser); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid input data"})
 		return
 	}
 
 	if requestUser.NewPassword != requestUser.NewPasswordVerify {
-		SendError(c, http.StatusBadRequest, errors.New("passwords do not match"))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Passwords do not match"})
 		return
 	}
 
 	if user.HasMFAEnabled() {
 		totpToken, err := middleware.ExtractTOTP(c)
 		if err != nil {
-			SendError(c, http.StatusNotFound, err)
+			c.JSON(http.StatusNotFound, gin.H{"error": "No MFA supplied"})
 			return
 		}
 		if totp.Validate(totpToken, user.TotpSecret) {
-			c.Status(http.StatusUnauthorized)
-			c.Abort()
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid MFA"})
 			return
 		}
 	}
@@ -218,7 +213,7 @@ func UpdatePassword(c *gin.Context) {
 	if result := database.GetInstance().
 		Where("user_id = ?", user.ID).
 		Delete(&database.RefreshToken{}); result.Error != nil {
-		SendError(c, http.StatusNotFound, result.Error)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Cannot find logout credentials"})
 		return
 	}
 
@@ -228,13 +223,13 @@ func UpdatePassword(c *gin.Context) {
 func UpdateSteam(c *gin.Context) {
 	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
-		SendError(c, http.StatusNotFound, err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
 		return
 	}
 
 	var steamPatch patchSteam
-	if err := c.ShouldBindJSON(&steamPatch); err != nil {
-		SendError(c, http.StatusUnprocessableEntity, err)
+	if err = c.ShouldBindJSON(&steamPatch); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid input data"})
 		return
 	}
 
@@ -245,7 +240,7 @@ func UpdateSteam(c *gin.Context) {
 		GetInstance().
 		Select("steam_id", "trade_url").
 		Save(&user); result.Error != nil {
-		SendError(c, http.StatusUnprocessableEntity, result.Error)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Unable to update Steam credentials"})
 		return
 	}
 
@@ -255,14 +250,4 @@ func UpdateSteam(c *gin.Context) {
 func isEmailValid(e string) bool {
 	emailRegex := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
 	return emailRegex.MatchString(e)
-}
-
-func SendError(c *gin.Context, statusCode int, err error) {
-	type genericError struct {
-		Message any `json:"message"`
-	}
-
-	c.JSON(statusCode, genericError{
-		Message: err.Error(),
-	})
 }

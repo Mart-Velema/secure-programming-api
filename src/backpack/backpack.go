@@ -1,13 +1,17 @@
 package backpack
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
 
 func GetPrices(c *gin.Context) {
 	if PricingCache.CachedOn.IsZero() {
-		c.String(503, "Cache not initialised")
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Cache not instantiated"})
 		return
 	}
-	c.JSON(200, PricingCache)
+	c.JSON(http.StatusOK, PricingCache)
 }
 
 func GetSpecificPrice(marketHashName string, quality Quality, isCraftable bool, effectId string) uint {

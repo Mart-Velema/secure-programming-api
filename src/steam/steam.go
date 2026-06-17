@@ -57,47 +57,33 @@ func GetBotStatus(c *gin.Context) {
 }
 
 func GetBotInventory(c *gin.Context) {
-	appId := c.DefaultQuery("appId", "440")
-	contextId := c.DefaultQuery("contextId", "2")
-
-	if appId != "440" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "unsupported appId",
-		})
-		return
-	}
-
-	if contextId != "2" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "unsupported contextId",
-		})
-		return
-	}
+	const appId = 440
+	const contextId = 2
 
 	path := fmt.Sprintf(
-		"/steam/inventory?appId=%s&contextId=%s",
+		"/steam/inventory?appId=%d&contextId=%d",
 		appId,
 		contextId,
 	)
-	
+
 	result, err := steamBotRequest(http.MethodGet, path, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get Steam Inventory"})
 		return
 	}
 	var inventory items.SteamInventoryResponse
 	err = json.Unmarshal(*result, &inventory)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to process Steam Inventory"})
 		return
 	}
-	c.JSON(http.StatusOK, inventory.ToItems())
+	c.JSON(http.StatusOK, inventory.ToItems().Assets)
 }
 
 func GetTradeOffers(c *gin.Context) {
 	_, err := steamBotRequest(http.MethodGet, "/steam/trade-offers", nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get trade offers"})
 		return
 	}
 }
@@ -105,7 +91,7 @@ func GetTradeOffers(c *gin.Context) {
 func GetTradeOfferHistory(c *gin.Context) {
 	_, err := steamBotRequest(http.MethodGet, "/steam/trade-offers/history", nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get trade offer history"})
 		return
 	}
 }
@@ -120,7 +106,7 @@ func GetTradeOffer(c *gin.Context) {
 
 	_, err := steamBotRequest(http.MethodGet, path, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get requested trade offer"})
 		return
 	}
 }
@@ -128,7 +114,7 @@ func GetTradeOffer(c *gin.Context) {
 func SendTradeOffer(c *gin.Context) {
 	_, err := steamBotRequest(http.MethodPost, "/steam/trade-offers", c.Request.Body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to send trade offers"})
 		return
 	}
 }
@@ -143,7 +129,7 @@ func AcceptTradeOffer(c *gin.Context) {
 
 	_, err := steamBotRequest(http.MethodPost, path, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to accept trade offers"})
 		return
 	}
 }
@@ -158,7 +144,7 @@ func CancelTradeOffer(c *gin.Context) {
 
 	_, err := steamBotRequest(http.MethodPost, path, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to cancel trade offers"})
 		return
 	}
 }

@@ -14,7 +14,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"guineatrade.nhlstenden.com/src/auth"
 	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/items"
 )
@@ -155,16 +154,14 @@ func getInventory(steamID uint64) (*items.InventoryResponse, error) {
 func GetInventory(c *gin.Context) {
 	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
-		auth.SendError(c, http.StatusNotFound, err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
 		return
 	}
 
 	inventory, err := getInventory(user.SteamId)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get inventory data"})
 		return
 	}
-	c.JSON(200, inventory.ToItem())
+	c.JSON(200, inventory.ToItem().Assets)
 }
