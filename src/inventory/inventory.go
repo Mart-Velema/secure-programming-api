@@ -117,7 +117,7 @@ func init() {
 	}
 }
 
-func getInventory(steamID uint64) (*items.InventoryResponse, error) {
+func GetUserInventory(steamID uint64) (*items.InventoryResponse, error) {
 	url := fmt.Sprintf(
 		"https://steamcommunity.com/inventory/%d/440/2?count=2000&l=english",
 		steamID,
@@ -158,7 +158,7 @@ func GetInventory(c *gin.Context) {
 		return
 	}
 
-	inventory, err := getInventory(user.SteamId)
+	inventory, err := GetUserInventory(user.SteamId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get inventory data"})
 		return

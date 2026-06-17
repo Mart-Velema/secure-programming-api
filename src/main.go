@@ -12,9 +12,9 @@ import (
 	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/backpack"
 	"guineatrade.nhlstenden.com/src/database"
-	"guineatrade.nhlstenden.com/src/stripe"
 	"guineatrade.nhlstenden.com/src/inventory"
 	"guineatrade.nhlstenden.com/src/steam"
+	"guineatrade.nhlstenden.com/src/stripe"
 )
 
 func HelloWorld(c *gin.Context) {
@@ -88,7 +88,7 @@ func main() {
 		}
 		stripeGroup := apiRestricted.Group("/stripe")
 		{
-			stripeGroup.GET("/createPaymentSession", stripe.CreatePaymentSession)
+			stripeGroup.POST("/createPaymentSession", stripe.CreatePaymentSession)
 		}
 	}
 

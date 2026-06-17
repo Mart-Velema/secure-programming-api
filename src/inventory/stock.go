@@ -1,7 +1,6 @@
 package inventory
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,10 +15,8 @@ func GetUserStock(c *gin.Context) {
 		return
 	}
 
-	log.Println(user.SteamId)
-	userInventory, err := getInventory(user.SteamId)
+	userInventory, err := GetUserInventory(user.SteamId)
 	if err != nil {
-		log.Println(err)
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Could not get user inventory"})
 		return
 	}
@@ -31,6 +28,7 @@ func GetSteamBotStock(c *gin.Context) {
 	botInventory, err := steam.GetBotInventoryData()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get bot inventory"})
+		return
 	}
 
 	c.JSON(http.StatusOK, botInventory.ToStock())

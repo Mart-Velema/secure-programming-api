@@ -41,7 +41,7 @@ func (items Items) ToStock() []Stock {
 	return stock
 }
 
-func (items Items) getItemsOfType(itemType ItemType, quantity uint32) []Item {
+func (items Items) GetItemsOfType(itemType ItemType, quantity uint32) []Item {
 	itemList := make([]Item, quantity)
 	for _, item := range items.Assets {
 		if item.ItemType == itemType {

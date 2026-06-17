@@ -2,54 +2,62 @@ package stripe
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v85"
+	"guineatrade.nhlstenden.com/src/auth/middleware"
 )
 
 func CreatePaymentSession(c *gin.Context) {
-	lineItems := []*stripe.CheckoutSessionCreateLineItemParams{
-		{
-			PriceData: &stripe.CheckoutSessionCreateLineItemPriceDataParams{
-				Currency:   stripe.String("usd"),
-				UnitAmount: stripe.Int64(1000),
-				ProductData: &stripe.CheckoutSessionCreateLineItemPriceDataProductDataParams{
-					Name:        stripe.String("Item A"),
-					Description: stripe.String("First item"),
-				},
-			},
-			Quantity: stripe.Int64(1),
-		},
-		{
-			PriceData: &stripe.CheckoutSessionCreateLineItemPriceDataParams{
-				Currency:   stripe.String("usd"),
-				UnitAmount: stripe.Int64(2500),
-				ProductData: &stripe.CheckoutSessionCreateLineItemPriceDataProductDataParams{
-					Name:        stripe.String("Item B"),
-					Description: stripe.String("Second item"),
-				},
-			},
-			Quantity: stripe.Int64(2),
-		},
-		{
-			PriceData: &stripe.CheckoutSessionCreateLineItemPriceDataParams{
-				Currency:   stripe.String("usd"),
-				UnitAmount: stripe.Int64(2500), // $25.00
-				ProductData: &stripe.CheckoutSessionCreateLineItemPriceDataProductDataParams{
-					Name:        stripe.String("Item C"),
-					Description: stripe.String("Second item"),
-				},
-			},
-			Quantity: stripe.Int64(1),
-		},
-	}
-	session, err := createPaymentSessionData(lineItems)
-	if err != nil {
-		c.String(400, err.Error())
+	var requestedStockList []CheckoutRequest
+	if err := c.ShouldBindJSON(&requestedStockList); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid json input"})
 		return
 	}
 
-	c.String(200, session.URL)
+	user, err := middleware.ExtractTokenUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
+		return
+	}
+
+	lineItems := make([]*stripe.CheckoutSessionCreateLineItemParams, 0, len(requestedStockList))
+
+	for _, item := range toCheckoutItems(user.SteamId, requestedStockList) {
+		lineItems = append(lineItems, createCheckoutSessionLineItem(
+			int64(item.Price()),
+			item.Name(),
+			item.Description(),
+			int64(len(item.Items)),
+			"", // TODO: Add transactionIds
+		))
+	}
+
+	session, err := createPaymentSessionData(lineItems)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create payment session"})
+		return
+	}
+
+	c.String(http.StatusOK, session.URL)
+}
+
+func createCheckoutSessionLineItem(price int64, name string, description string, quantity int64, transactionId string) *stripe.CheckoutSessionCreateLineItemParams {
+	return &stripe.CheckoutSessionCreateLineItemParams{
+		PriceData: &stripe.CheckoutSessionCreateLineItemPriceDataParams{
+			Currency:   new("usd"),
+			UnitAmount: new(price),
+			ProductData: &stripe.CheckoutSessionCreateLineItemPriceDataProductDataParams{
+				Name:        new(name),
+				Description: new(description),
+			},
+		},
+		Quantity: new(quantity),
+		Metadata: map[string]string{
+			"transactionId": transactionId,
+		},
+	}
 }
 
 func createPaymentSessionData(lineItems []*stripe.CheckoutSessionCreateLineItemParams) (*stripe.CheckoutSession, error) {
