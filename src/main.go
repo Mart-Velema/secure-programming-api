@@ -78,11 +78,13 @@ func main() {
 		steamGroup := apiRestricted.Group("/steam")
 		{
 			steamGroup.GET("/inventory", steam.GetBotInventory)
+			steamGroup.GET("/stock", inventory.GetSteamBotStock)
 		}
 
 		userGroup := apiRestricted.Group("/user")
 		{
 			userGroup.GET("/inventory", inventory.GetInventory)
+			userGroup.GET("/stock", inventory.GetUserStock)
 		}
 		stripeGroup := apiRestricted.Group("/stripe")
 		{

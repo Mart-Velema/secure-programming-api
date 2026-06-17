@@ -57,6 +57,15 @@ func GetBotStatus(c *gin.Context) {
 }
 
 func GetBotInventory(c *gin.Context) {
+	result, err := GetBotInventoryData()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get inventory data"})
+		return
+	}
+	c.JSON(http.StatusOK, result.Assets)
+}
+
+func GetBotInventoryData() (items.Items, error) {
 	const appId = 440
 	const contextId = 2
 
@@ -68,16 +77,14 @@ func GetBotInventory(c *gin.Context) {
 
 	result, err := steamBotRequest(http.MethodGet, path, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get Steam Inventory"})
-		return
+		return items.Items{}, err
 	}
 	var inventory items.SteamInventoryResponse
 	err = json.Unmarshal(*result, &inventory)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to process Steam Inventory"})
-		return
+		return items.Items{}, err
 	}
-	c.JSON(http.StatusOK, inventory.ToItems().Assets)
+	return inventory.ToItems(), nil
 }
 
 func GetTradeOffers(c *gin.Context) {
