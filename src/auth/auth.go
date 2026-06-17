@@ -55,7 +55,7 @@ func Register(c *gin.Context) {
 		return
 	}
 	if postRegister.Password != postRegister.PasswordVerify {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Passowrds do not match"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Passwords do not match"})
 		return
 	}
 
@@ -77,7 +77,7 @@ func Login(c *gin.Context) {
 		Where("email_hash = ?", encryption.Hash(user.Email)).
 		Where("password = ?", encryption.Hash(user.Password)).
 		First(&user); result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User does not exists"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "User does not exist"})
 		return
 	}
 
@@ -110,7 +110,7 @@ func Refresh(c *gin.Context) {
 		Joins("User").
 		Where("refresh_tokens.token_hash = ?", encryption.Hash(refreshToken.Refresh)).
 		First(&token); result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Token does not exists"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Token does not exist"})
 		return
 	}
 
