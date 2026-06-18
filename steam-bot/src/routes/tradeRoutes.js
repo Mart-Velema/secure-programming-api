@@ -53,7 +53,12 @@ router.post("/dry-run", (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    const { tradeUrl, itemsToGive, message } = req.body;
+    const {
+      tradeUrl,
+      itemsToGive = [],
+      itemsToReceive = [],
+      message,
+    } = req.body;
 
     if (!tradeUrl) {
       return res.status(400).json({
@@ -71,16 +76,31 @@ router.post("/", async (req, res) => {
       });
     }
 
-    if (!Array.isArray(itemsToGive) || itemsToGive.length === 0) {
+    if (!Array.isArray(itemsToGive)) {
       return res.status(400).json({
         ok: false,
-        error: "itemsToGive must contain at least one item",
+        error: "itemsToGive must be an array",
+      });
+    }
+
+    if (!Array.isArray(itemsToReceive)) {
+      return res.status(400).json({
+        ok: false,
+        error: "itemsToReceive must be an array",
+      });
+    }
+
+    if (itemsToGive.length === 0 && itemsToReceive.length === 0) {
+      return res.status(400).json({
+        ok: false,
+        error: "trade offer must contain at least one item",
       });
     }
 
     const result = await sendTradeOffer(
       tradeUrl,
       itemsToGive,
+      itemsToReceive,
       message || "GuineaTrade test offer"
     );
 
