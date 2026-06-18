@@ -1,13 +1,14 @@
 package steam
 
 import (
-	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"bytes"
 
 	"github.com/gin-gonic/gin"
 	"guineatrade.nhlstenden.com/src/items"
@@ -120,15 +121,33 @@ func GetTradeOffer(c *gin.Context) {
 }
 
 func SendTradeOffer(tradeOfferRequest SendTradeOfferRequest) error {
+	if tradeOfferRequest.TradeURL == "" {
+		return errors.New("tradeUrl is required")
+	}
+
+	if len(tradeOfferRequest.ItemsToGive) == 0 && len(tradeOfferRequest.ItemsToReceive) == 0 {
+		return errors.New("trade offer must contain at least one item")
+	}
+
 	body, err := json.Marshal(tradeOfferRequest)
 	if err != nil {
 		return err
 	}
 
-	_, err = steamBotRequest(http.MethodPost, "/steam/trade-offers", bytes.NewReader(body))
+	result, err := steamBotRequest(http.MethodPost, "/steam/trade-offers", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
+
+	var response SendTradeOfferResponse
+	if err = json.Unmarshal(*result, &response); err != nil {
+		return err
+	}
+
+	if !response.OK {
+		return errors.New("unable to process trade offer request")
+	}
+
 	return nil
 }
 
