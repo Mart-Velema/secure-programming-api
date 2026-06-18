@@ -3,9 +3,10 @@ package steam
 import "time"
 
 type SendTradeOfferRequest struct {
-	TradeURL    string           `json:"tradeUrl"`
-	ItemsToGive []TradeOfferItem `json:"itemsToGive"`
-	Message     string           `json:"message"`
+	TradeURL       string           `json:"tradeUrl"`
+	ItemsToGive    []TradeOfferItem `json:"itemsToGive,omitempty"`
+	ItemsToReceive []TradeOfferItem `json:"itemsToReceive,omitempty"`
+	Message        string           `json:"message,omitempty"`
 }
 
 type TradeOfferItem struct {

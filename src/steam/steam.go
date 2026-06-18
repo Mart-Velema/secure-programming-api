@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"bytes"
 
 	"github.com/gin-gonic/gin"
 	"guineatrade.nhlstenden.com/src/items"
@@ -112,11 +113,64 @@ func GetTradeOffer(c *gin.Context) {
 }
 
 func SendTradeOffer(c *gin.Context) {
-	_, err := steamBotRequest(http.MethodPost, "/steam/trade-offers", c.Request.Body)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to send trade offers"})
+	var request SendTradeOfferRequest
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid trade offer request",
+		})
 		return
 	}
+
+	if request.TradeURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "tradeUrl is required",
+		})
+		return
+	}
+
+	if len(request.ItemsToGive) == 0 && len(request.ItemsToReceive) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "trade offer must contain at least one item",
+		})
+		return
+	}
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "unable to process trade offer request",
+		})
+		return
+	}
+
+	result, err := steamBotRequest(
+		http.MethodPost,
+		"/steam/trade-offers",
+		bytes.NewReader(body),
+	)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unable to send trade offer",
+		})
+		return
+	}
+
+	var response SendTradeOfferResponse
+	if err := json.Unmarshal(*result, &response); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unable to process trade offer response",
+		})
+		return
+	}
+
+	if !response.OK {
+		c.JSON(http.StatusBadGateway, response)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func AcceptTradeOffer(c *gin.Context) {
