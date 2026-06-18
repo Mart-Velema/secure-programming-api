@@ -1,15 +1,30 @@
 const TradeOfferManager = require("steam-tradeoffer-manager");
 const { client, manager } = require("./steamClient");
 
-function sendTradeOffer(tradeUrl, itemsToGive, message = "GuineaTrade test offer") {
+function sendTradeOffer(
+  tradeUrl,
+  itemsToGive = [],
+  itemsToReceive = [],
+  message = "GuineaTrade test offer"
+) {
   return new Promise((resolve, reject) => {
     if (!client.steamID) {
       reject(new Error("Steam bot is not logged in"));
       return;
     }
 
-    if (!Array.isArray(itemsToGive) || itemsToGive.length === 0) {
-      reject(new Error("itemsToGive must contain at least one item"));
+    if (!Array.isArray(itemsToGive)) {
+      reject(new Error("itemsToGive must be an array"));
+      return;
+    }
+
+    if (!Array.isArray(itemsToReceive)) {
+      reject(new Error("itemsToReceive must be an array"));
+      return;
+    }
+
+    if (itemsToGive.length === 0 && itemsToReceive.length === 0) {
+      reject(new Error("trade offer must contain at least one item"));
       return;
     }
 
@@ -17,6 +32,14 @@ function sendTradeOffer(tradeUrl, itemsToGive, message = "GuineaTrade test offer
 
     for (const item of itemsToGive) {
       offer.addMyItem({
+        appid: Number(item.appId),
+        contextid: String(item.contextId),
+        assetid: String(item.assetId),
+      });
+    }
+
+    for (const item of itemsToReceive) {
+      offer.addTheirItem({
         appid: Number(item.appId),
         contextid: String(item.contextId),
         assetid: String(item.assetId),
