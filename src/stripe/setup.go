@@ -1,6 +1,7 @@
 package stripe
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -39,32 +40,66 @@ type CheckoutItem struct {
 }
 
 type CheckoutRequest struct {
-	Stock  items.Stock
-	IsSold bool `json:"isSold"`
+	MarketHashName string           `json:"marketHashName"`
+	Craftable      bool             `json:"craftability"`
+	Quality        backpack.Quality `json:"quality"`
+	Effect         string           `json:"unusual,omitempty"`
+	Quantity       uint32           `json:"quantity"`
+	IsSold         bool             `json:"isSold"`
+}
+
+type Checkout struct {
+	stock  items.Stock
+	isSold bool
+}
+
+func (cr CheckoutRequest) ToCheckout() Checkout {
+	return Checkout{
+		stock: items.Stock{
+			ItemType: items.ItemType{
+				MarketHashName: cr.MarketHashName,
+				Craftable:      cr.Craftable,
+				Quality:        cr.Quality,
+				Effect:         cr.Effect,
+			},
+			Quantity: cr.Quantity,
+		},
+		isSold: cr.IsSold,
+	}
 }
 
 func toCheckoutItems(steamId uint64, stockList []CheckoutRequest) ([]CheckoutItem, error) {
 	groups := make(map[items.ItemType]*CheckoutItem)
 
+	userInv, err := inventory.GetUserInventory(steamId)
+	if err != nil {
+		return nil, err
+	}
+	var userInventory = userInv.ToItem()
+
+	botInventory, err := steam.GetBotInventoryData()
+	if err != nil {
+		return nil, err
+	}
+
 	for _, item := range stockList {
-		stock := item.Stock
+		checkoutItem := item.ToCheckout()
+		stock := checkoutItem.stock
 
 		var itemInventory items.Items
 		if item.IsSold {
-			var err error
-			if itemInventory, err = steam.GetBotInventoryData(); err != nil {
-				return nil, err
-			}
+			itemInventory = userInventory
 		} else {
-			inv, err := inventory.GetUserInventory(steamId)
-			if err != nil {
-				return nil, err
-			}
-			itemInventory = inv.ToItem()
+			itemInventory = botInventory
+		}
+
+		assetItems := itemInventory.GetItemsOfType(stock.ItemType, stock.Quantity)
+		if assetItems == nil {
+			return nil, errors.New("could not get stock")
 		}
 
 		groups[stock.ItemType] = &CheckoutItem{
-			Items:        itemInventory.GetItemsOfType(stock.ItemType, stock.Quantity), // TODO: Call this function safely
+			Items:        assetItems,
 			PricePerItem: backpack.GetSpecificPrice(stock.MarketHashName, stock.Quality, stock.Craftable, stock.Effect),
 			IsSold:       item.IsSold,
 		}

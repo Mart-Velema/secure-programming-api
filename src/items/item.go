@@ -1,6 +1,8 @@
 package items
 
-import "guineatrade.nhlstenden.com/src/backpack"
+import (
+	"guineatrade.nhlstenden.com/src/backpack"
+)
 
 type Items struct {
 	Assets []Item
@@ -42,7 +44,12 @@ func (items Items) ToStock() []Stock {
 }
 
 func (items Items) GetItemsOfType(itemType ItemType, quantity uint32) []Item {
-	itemList := make([]Item, quantity)
+	var itemList []Item
+
+	if itemType.Effect == "0" {
+		itemType.Effect = ""
+	}
+
 	for _, item := range items.Assets {
 		if item.ItemType == itemType {
 			itemList = append(itemList, item)
@@ -51,5 +58,6 @@ func (items Items) GetItemsOfType(itemType ItemType, quantity uint32) []Item {
 			}
 		}
 	}
+
 	return nil
 }

@@ -24,6 +24,7 @@ func CreatePaymentSession(c *gin.Context) {
 	}
 
 	checkoutItems, err := toCheckoutItems(user.SteamId, requestedStockList)
+
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Could not get items"})
 		return
@@ -35,9 +36,9 @@ func CreatePaymentSession(c *gin.Context) {
 		var price = int64(checkoutItem.Price())
 
 		if checkoutItem.IsSold {
-			totalCost += price
-		} else {
 			totalCost -= price
+		} else {
+			totalCost += price
 		}
 	}
 
@@ -63,18 +64,29 @@ func CreatePaymentSession(c *gin.Context) {
 		// TODO: Save a record of this in the database
 		c.JSON(http.StatusOK, gin.H{"status": "created_link", "url": session.URL})
 	} else {
-		// TODO: Send a trade request to user
-
-		req := steam.SendTradeOfferRequest{
-			TradeURL: user.TradeUrl,
-			ItemsToGive: []steam.TradeOfferItem{
-				{
-					AssetID:   "12345",
+		var sellItems []steam.TradeOfferItem
+		var buyItems []steam.TradeOfferItem
+		for _, checkoutItem := range checkoutItems {
+			for _, item := range checkoutItem.Items {
+				tradeOfferItem := steam.TradeOfferItem{
 					AppID:     440,
 					ContextID: "2",
-				},
-			},
-			Message: "Thanks for trading with GuineaTrade!",
+					AssetID:   item.AssetId,
+				}
+
+				if checkoutItem.IsSold {
+					sellItems = append(sellItems, tradeOfferItem)
+				} else {
+					buyItems = append(buyItems, tradeOfferItem)
+				}
+			}
+		}
+
+		req := steam.SendTradeOfferRequest{
+			TradeURL:       user.TradeUrl,
+			ItemsToGive:    buyItems,
+			ItemsToReceive: sellItems,
+			Message:        "Thanks for trading with GuineaTrade!",
 		}
 
 		err = steam.SendTradeOffer(req)
