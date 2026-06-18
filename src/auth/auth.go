@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log"
 	"net/http"
 	"regexp"
 	"time"
@@ -115,11 +116,25 @@ func Refresh(c *gin.Context) {
 	}
 
 	if time.Now().After(token.ExpiresOn) {
-		database.GetInstance().Delete(&token)
+		if result := database.GetInstance().
+			Where("token_hash = ?", token.TokenHash).
+			Delete(&token); result.Error != nil {
+			log.Println(result.Error)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to log out"})
+			return
+		}
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token is expired"})
 		return
 	}
+
 	if token.Nonce != middleware.GenerateTokenNonce(c) {
+		if result := database.GetInstance().
+			Where("token_hash = ?", token.TokenHash).
+			Delete(&token); result.Error != nil {
+			log.Println(result.Error)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to log out"})
+			return
+		}
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token is used from another location"})
 		return
 	}
@@ -142,7 +157,10 @@ func Logout(c *gin.Context) {
 		return
 	}
 
-	if result := database.GetInstance().Delete(&refreshToken.Refresh); result.Error != nil {
+	if result := database.GetInstance().
+		Where("token_hash = ?", encryption.Hash(refreshToken.Refresh)).
+		Delete(&database.RefreshToken{}); result.Error != nil {
+		log.Println(result.Error)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Cannot find logout credentials"})
 		return
 	}
