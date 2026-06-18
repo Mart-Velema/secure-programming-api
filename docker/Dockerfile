@@ -12,4 +12,5 @@ WORKDIR /
 COPY --from=constructor /app/gt /gt
 COPY .env /.env
 COPY item-constants.json /item-constants.json
+COPY unusuals.json /unusuals.json
 ENTRYPOINT ["/gt"]

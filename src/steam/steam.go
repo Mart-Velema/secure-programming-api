@@ -1,6 +1,7 @@
 package steam
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -118,12 +119,17 @@ func GetTradeOffer(c *gin.Context) {
 	}
 }
 
-func SendTradeOffer(c *gin.Context) {
-	_, err := steamBotRequest(http.MethodPost, "/steam/trade-offers", c.Request.Body)
+func SendTradeOffer(tradeOfferRequest SendTradeOfferRequest) error {
+	body, err := json.Marshal(tradeOfferRequest)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to send trade offers"})
-		return
+		return err
 	}
+
+	_, err = steamBotRequest(http.MethodPost, "/steam/trade-offers", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func AcceptTradeOffer(c *gin.Context) {

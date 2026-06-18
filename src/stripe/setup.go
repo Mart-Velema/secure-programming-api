@@ -40,10 +40,10 @@ type CheckoutItem struct {
 
 type CheckoutRequest struct {
 	Stock  items.Stock
-	IsSold bool
+	IsSold bool `json:"isSold"`
 }
 
-func toCheckoutItems(steamId uint64, stockList []CheckoutRequest) []CheckoutItem {
+func toCheckoutItems(steamId uint64, stockList []CheckoutRequest) ([]CheckoutItem, error) {
 	groups := make(map[items.ItemType]*CheckoutItem)
 
 	for _, item := range stockList {
@@ -53,12 +53,12 @@ func toCheckoutItems(steamId uint64, stockList []CheckoutRequest) []CheckoutItem
 		if item.IsSold {
 			var err error
 			if itemInventory, err = steam.GetBotInventoryData(); err != nil {
-				return nil
+				return nil, err
 			}
 		} else {
 			inv, err := inventory.GetUserInventory(steamId)
 			if err != nil {
-				return nil
+				return nil, err
 			}
 			itemInventory = inv.ToItem()
 		}
@@ -75,7 +75,7 @@ func toCheckoutItems(steamId uint64, stockList []CheckoutRequest) []CheckoutItem
 		result = append(result, *checkoutItem)
 	}
 
-	return result
+	return result, nil
 }
 
 func (c CheckoutItem) Name() string {

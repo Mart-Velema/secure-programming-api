@@ -88,7 +88,7 @@ func main() {
 		}
 		stripeGroup := apiRestricted.Group("/stripe")
 		{
-			stripeGroup.POST("/createPaymentSession", stripe.CreatePaymentSession)
+			stripeGroup.POST("/create", stripe.CreatePaymentSession)
 		}
 	}
 
