@@ -192,7 +192,11 @@ func updatePriceCache() error {
 }
 
 func installItemCache() {
-	content, err := os.ReadFile("./item-constants.json")
+	cacheFile, found := os.LookupEnv("ITEM_CONSTANTS")
+	if !found {
+		log.Fatalf("ITEM_CONSTANTS is undefined")
+	}
+	content, err := os.ReadFile(cacheFile)
 	if err != nil {
 		log.Fatal(err)
 	}

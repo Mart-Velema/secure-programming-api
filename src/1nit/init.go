@@ -8,11 +8,10 @@ import (
 )
 
 func init() {
-	envFileLocation := "./.env"
-	for idx, arg := range os.Args {
-		if arg == "--env" {
-			envFileLocation = os.Args[idx+1]
-		}
+	envFileLocation, found := os.LookupEnv("ENV_FILE")
+	if !found {
+		envFileLocation = "./.env"
+		log.Println("Using default path for .env file: ./.env")
 	}
 	log.Printf("Loading .env file from: %s", envFileLocation)
 	err := godotenv.Load(envFileLocation)
