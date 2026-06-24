@@ -14,6 +14,7 @@ import (
 	"github.com/go-playground/assert/v2"
 	"github.com/google/uuid"
 	"github.com/pquerna/otp/totp"
+	_ "guineatrade.nhlstenden.com/src/1nit"
 	"guineatrade.nhlstenden.com/src/auth"
 	"guineatrade.nhlstenden.com/src/auth/mfa"
 )

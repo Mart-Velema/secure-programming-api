@@ -157,5 +157,5 @@ func GetInventory(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get inventory data"})
 		return
 	}
-	c.JSON(200, inventory.ToItem().Assets)
+	c.JSON(http.StatusOK, inventory.ToItem().Assets)
 }
