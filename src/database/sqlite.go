@@ -1,13 +1,16 @@
 package database
 
 import (
+	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/cgholdings/go-common/database/encryption"
+	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -125,6 +128,25 @@ func createDB() {
 	}
 
 	instanceDB = db
+}
+
+func CreateRandomUser() *User {
+	password := uuid.New()
+	mfaCode := rand.Text()
+	email := fmt.Sprintf("%s@%s.com", uuid.New(), uuid.New())
+	name := rand.Text()
+
+	user := User{
+		Email:        email,
+		Name:         name,
+		Password:     password.String(),
+		TotpSecret:   mfaCode,
+		RecoveryCode: mfaCode,
+	}
+
+	GetInstance().Save(&user)
+
+	return &user
 }
 
 func GetInstance() *gorm.DB {
