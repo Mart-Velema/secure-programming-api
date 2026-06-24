@@ -23,13 +23,6 @@ func HelloWorld(c *gin.Context) {
 var Version string
 
 func init() {
-	if len(os.Args) >= 2 && os.Args[1] == "--seed" {
-		err := os.Remove(os.Getenv("SQLITE_FILE_LOCATION"))
-		if err != nil {
-			log.Println(err)
-		}
-		database.Seed()
-	}
 	_ = database.GetInstance()
 }
 
