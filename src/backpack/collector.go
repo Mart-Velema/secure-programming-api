@@ -13,8 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
 const (
@@ -36,10 +34,6 @@ type itemConstants struct {
 var client *http.Client
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %s\n", err)
-	}
 	envApiKey, apiKeyExists := os.LookupEnv("BACKPACK_API_KEY")
 	envApiHash, apiHashExists := os.LookupEnv("BACKPACK_API_HASH")
 

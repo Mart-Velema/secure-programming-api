@@ -92,6 +92,12 @@ API hashes can be generated with the following OpenSSL pipeline:
 openssl s_client -connect backpack.tf:443 -servername backpack.tf | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256
 ```
 
+In case that the binary or project is executed in a different directory than the .env file, you can supply the filepath using the `--env` CLI flag:
+
+```
+./gt --env /path/to/.env
+```
+
 <hr>
 
 ## Steam Bot

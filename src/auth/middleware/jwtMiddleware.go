@@ -14,7 +14,6 @@ import (
 	"github.com/cgholdings/go-common/database/encryption"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/joho/godotenv"
 	"guineatrade.nhlstenden.com/src/database"
 )
 
@@ -23,10 +22,6 @@ var refreshLifeSpan int
 var jwtSecret []byte
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %s\n", err)
-	}
 	tokenLifeSpanString, lifespanExists := os.LookupEnv("JWT_TIMEOUT_MINUTES")
 	jwtSecretString, secretsExists := os.LookupEnv("JWT_SECRET_KEY")
 	refreshLifeSpanString, lifespanRefreshExists := os.LookupEnv("JWT_REFRESH_DAYS")
@@ -35,6 +30,7 @@ func init() {
 		log.Fatal("JWT_TIMEOUT_MINUTES, JWT_SECRET_KEY and/or JWT_REFRESH_DAYS unset")
 	}
 
+	var err error
 	tokenLifeSpan, err = strconv.Atoi(tokenLifeSpanString)
 	if err != nil {
 		log.Fatal("JWT_TIMEOUT_MINUTES is not a valid integer")
