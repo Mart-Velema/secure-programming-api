@@ -23,6 +23,10 @@ func RegisterTOTP(c *gin.Context) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
 		return
 	}
+	if user.HasMFAEnabled() {
+		c.JSON(http.StatusConflict, gin.H{"error": "TOTP already registered"})
+		return
+	}
 
 	randomBytes := rand.Text()
 	recoveryCode := rand.Text() + rand.Text()
@@ -44,7 +48,7 @@ func RegisterTOTP(c *gin.Context) {
 func VerifyTOTP(c *gin.Context) {
 	user, err := middleware.ExtractTokenUser(c)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Token expired"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
 		return
 	}
 	passcode, err := middleware.ExtractTOTP(c)
@@ -74,13 +78,14 @@ func ResetTOTP(c *gin.Context) {
 	passcode, err := middleware.ExtractTOTP(c)
 	if err == nil {
 		if !totp.Validate(passcode, user.TotpSecret) {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid MFA"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid MFA"})
 			return
 		}
 	} else {
 		recoveryCode, err := middleware.ExtractRecoveryCode(c)
 		if err != nil {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "No recovery or TOTP code supplied"})
+			return
 		}
 		if recoveryCode != user.RecoveryCode {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid recovery code"})

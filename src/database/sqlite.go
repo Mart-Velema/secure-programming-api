@@ -145,6 +145,7 @@ func CreateRandomUser() *User {
 	}
 
 	GetInstance().Save(&user)
+	GetInstance().First(&user)
 
 	return &user
 }

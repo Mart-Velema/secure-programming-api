@@ -62,8 +62,6 @@ func TestTOTPMiddleware(t *testing.T) {
 	user := database.CreateRandomUser()
 	jwt, _ := GenerateToken(user)
 
-	database.GetInstance().First(&user)
-
 	type test struct {
 		JWT            string
 		TOTPCode       string

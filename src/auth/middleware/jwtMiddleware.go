@@ -110,11 +110,12 @@ func IsTokenValid(c *gin.Context) error {
 
 func ExtractToken(c *gin.Context) (string, error) {
 	bearerToken := c.Request.Header.Get("Authorization")
-	if len(strings.Split(bearerToken, " ")) != 2 {
+	splits := strings.Split(bearerToken, " ")
+	if len(splits) != 2 {
 		return "", errors.New("can't find token in HTTP headers")
 	}
 
-	return strings.Split(bearerToken, " ")[1], nil
+	return splits[1], nil
 }
 
 func ExtractTokenUser(c *gin.Context) (database.User, error) {
