@@ -57,6 +57,8 @@ func TestAuthFlow(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &tokens)
 	assert.IsEqual(err, nil)
 
+	// ===========
+	// Get new JWT
 	w = httptest.NewRecorder()
 	tokenJson, _ := json.Marshal(tokens)
 	req, _ = http.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewReader(tokenJson))
@@ -96,10 +98,10 @@ func TestAuthFlow(t *testing.T) {
 
 	// ===========
 	// Update password
-
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("PATCH", "/api/v1/auth/me", bytes.NewReader(userJson))
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", tokens.JWT))
+
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusAccepted, w.Code)
@@ -124,6 +126,8 @@ func TestAuthFlow(t *testing.T) {
 
 	assert.Equal(t, http.StatusNoContent, w.Code)
 
+	// ===========
+	// Get user data after Steam update
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/api/v1/auth/me", nil)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", tokens.JWT))
@@ -199,4 +203,23 @@ func TestAuthFlow(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// ===========
+	// Logout
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("POST", "/api/v1/auth/logout", bytes.NewReader(tokenJson))
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", tokens.JWT))
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// ===========
+	// Validate Logout
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewReader(tokenJson))
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
 }
