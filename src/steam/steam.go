@@ -169,17 +169,47 @@ func GetTradeStatus(c *gin.Context) {
 			return
 		}
 
-		// 3 = Status Accepted
-		if offer.Offer.State == 3 {
+		state := offer.Offer.State
+
+		canceledStates := map[int]bool{
+			4: true, // Countered
+			5: true, // Expired
+			6: true, // Canceled
+			7: true, // Declined
+		}
+
+		if canceledStates[state] {
+			trade.TradeStatus = database.CANCELLED
+			database.GetInstance().Save(&trade)
+
+			if trade.TradeAction == database.BUY {
+				user.Balance += trade.Cost
+				database.GetInstance().Save(&user)
+			}
+
+			c.JSON(http.StatusOK, gin.H{"status": database.CANCELLED, "data": ""})
+			return
+		}
+
+		// Accepted
+		if state == 3 {
 			trade.TradeStatus = database.COMPLETED
 			database.GetInstance().Save(&trade)
+
+			if trade.TradeAction == database.SELL {
+				user.Balance += trade.Cost
+				database.GetInstance().Save(&user)
+			}
 
 			c.JSON(http.StatusOK, gin.H{"status": database.COMPLETED, "data": ""})
 			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{"status": database.TRADE_IN_PROGRESS, "data": trade.SteamTradeId})
+		return
 	}
+
+	c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Unable to get trade status"})
 }
 
 func SendTradeOffer(tradeOfferRequest SendTradeOfferRequest) (*SendTradeOfferResponse, error) {
