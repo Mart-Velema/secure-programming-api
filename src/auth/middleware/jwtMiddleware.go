@@ -118,34 +118,34 @@ func ExtractToken(c *gin.Context) (string, error) {
 	return splits[1], nil
 }
 
-func ExtractTokenUser(c *gin.Context) (database.User, error) {
+func ExtractTokenUser(c *gin.Context) (*database.User, error) {
 	tokenString, err := ExtractToken(c)
 	if err != nil {
-		return database.User{}, err
+		return nil, err
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return jwtSecret, nil
 	})
 	if err != nil {
-		return database.User{}, err
+		return nil, err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return database.User{}, errors.New("token is invalid")
+		return nil, errors.New("token is invalid")
 	}
 
 	userId, ok := claims["user_id"].(float64)
 	if !ok {
-		return database.User{}, errors.New("supplied ID is not a valid integer")
+		return nil, errors.New("supplied ID is not a valid integer")
 	}
 
 	var user database.User
 	user.ID = uint(userId)
 	if result := database.GetInstance().First(&user); result.Error != nil {
-		return database.User{}, result.Error
+		return nil, result.Error
 	}
 
-	return user, nil
+	return &user, nil
 }

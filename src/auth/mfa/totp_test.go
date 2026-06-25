@@ -113,8 +113,7 @@ func TestResetTOTP(t *testing.T) {
 		{jwt, false, true, true, http.StatusUnauthorized, "{\"error\":\"Invalid recovery code\"}"},
 	}
 
-	for idx, t2 := range tests {
-		fmt.Println(idx)
+	for _, t2 := range tests {
 		user.TotpSecret = rand.Text()
 		user.RecoveryCode = rand.Text()
 
