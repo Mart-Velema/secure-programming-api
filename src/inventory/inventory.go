@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/items"
 )
@@ -21,11 +20,6 @@ import (
 var steamClient *http.Client
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %s\n", err)
-	}
-
 	envSteamHash, steamHashExists := os.LookupEnv("STEAM_API_HASH")
 
 	if !steamHashExists {
@@ -163,5 +157,5 @@ func GetInventory(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get inventory data"})
 		return
 	}
-	c.JSON(200, inventory.ToItem().Assets)
+	c.JSON(http.StatusOK, inventory.ToItem().Assets)
 }

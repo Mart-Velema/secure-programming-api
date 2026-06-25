@@ -5,7 +5,9 @@ go 1.26.4
 require (
 	github.com/cgholdings/go-common v1.2.1
 	github.com/gin-gonic/gin v1.12.0
+	github.com/go-playground/assert/v2 v2.2.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/pquerna/otp v1.5.0
 	gorm.io/driver/sqlite v1.6.0

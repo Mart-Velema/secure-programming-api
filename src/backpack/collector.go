@@ -13,8 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
 const (
@@ -36,10 +34,6 @@ type itemConstants struct {
 var client *http.Client
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %s\n", err)
-	}
 	envApiKey, apiKeyExists := os.LookupEnv("BACKPACK_API_KEY")
 	envApiHash, apiHashExists := os.LookupEnv("BACKPACK_API_HASH")
 
@@ -198,7 +192,11 @@ func updatePriceCache() error {
 }
 
 func installItemCache() {
-	content, err := os.ReadFile("./item-constants.json")
+	cacheFile, found := os.LookupEnv("ITEM_CONSTANTS")
+	if !found {
+		log.Fatalf("ITEM_CONSTANTS is undefined")
+	}
+	content, err := os.ReadFile(cacheFile)
 	if err != nil {
 		log.Fatal(err)
 	}

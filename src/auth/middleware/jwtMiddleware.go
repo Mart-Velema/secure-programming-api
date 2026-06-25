@@ -14,7 +14,6 @@ import (
 	"github.com/cgholdings/go-common/database/encryption"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/joho/godotenv"
 	"guineatrade.nhlstenden.com/src/database"
 )
 
@@ -23,10 +22,6 @@ var refreshLifeSpan int
 var jwtSecret []byte
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %s\n", err)
-	}
 	tokenLifeSpanString, lifespanExists := os.LookupEnv("JWT_TIMEOUT_MINUTES")
 	jwtSecretString, secretsExists := os.LookupEnv("JWT_SECRET_KEY")
 	refreshLifeSpanString, lifespanRefreshExists := os.LookupEnv("JWT_REFRESH_DAYS")
@@ -35,6 +30,7 @@ func init() {
 		log.Fatal("JWT_TIMEOUT_MINUTES, JWT_SECRET_KEY and/or JWT_REFRESH_DAYS unset")
 	}
 
+	var err error
 	tokenLifeSpan, err = strconv.Atoi(tokenLifeSpanString)
 	if err != nil {
 		log.Fatal("JWT_TIMEOUT_MINUTES is not a valid integer")
@@ -114,41 +110,42 @@ func IsTokenValid(c *gin.Context) error {
 
 func ExtractToken(c *gin.Context) (string, error) {
 	bearerToken := c.Request.Header.Get("Authorization")
-	if len(strings.Split(bearerToken, " ")) != 2 {
+	splits := strings.Split(bearerToken, " ")
+	if len(splits) != 2 {
 		return "", errors.New("can't find token in HTTP headers")
 	}
 
-	return strings.Split(bearerToken, " ")[1], nil
+	return splits[1], nil
 }
 
-func ExtractTokenUser(c *gin.Context) (database.User, error) {
+func ExtractTokenUser(c *gin.Context) (*database.User, error) {
 	tokenString, err := ExtractToken(c)
 	if err != nil {
-		return database.User{}, err
+		return nil, err
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return jwtSecret, nil
 	})
 	if err != nil {
-		return database.User{}, err
+		return nil, err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return database.User{}, errors.New("token is invalid")
+		return nil, errors.New("token is invalid")
 	}
 
 	userId, ok := claims["user_id"].(float64)
 	if !ok {
-		return database.User{}, errors.New("supplied ID is not a valid integer")
+		return nil, errors.New("supplied ID is not a valid integer")
 	}
 
 	var user database.User
 	user.ID = uint(userId)
 	if result := database.GetInstance().First(&user); result.Error != nil {
-		return database.User{}, result.Error
+		return nil, result.Error
 	}
 
-	return user, nil
+	return &user, nil
 }
