@@ -31,16 +31,19 @@ func CreatePaymentSession(c *gin.Context) {
 	}
 
 	var totalCost int64
+	var discount int64
 	for i := range checkoutItems {
 		var checkoutItem = checkoutItems[i]
 		var price = int64(checkoutItem.Price())
 
 		if checkoutItem.IsSold {
 			totalCost -= price
+			discount += price
 		} else {
 			totalCost += price
 		}
 	}
+	discount *= 2 // Output of function is all prices of sold items combined *2 to get the discount instead
 
 	if totalCost > 0 {
 		lineItems := make([]*stripe.CheckoutSessionCreateLineItemParams, 0, len(requestedStockList))
@@ -55,7 +58,7 @@ func CreatePaymentSession(c *gin.Context) {
 			))
 		}
 
-		session, err := createPaymentSessionData(lineItems)
+		session, err := createPaymentSessionData(lineItems, discount)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create payment session"})
 			return
@@ -115,7 +118,8 @@ func createCheckoutSessionLineItem(price int64, name string, description string,
 	}
 }
 
-func createPaymentSessionData(lineItems []*stripe.CheckoutSessionCreateLineItemParams) (*stripe.CheckoutSession, error) {
+func createPaymentSessionData(lineItems []*stripe.CheckoutSessionCreateLineItemParams, discount int64) (*stripe.CheckoutSession, error) {
+
 	params := &stripe.CheckoutSessionCreateParams{
 		SuccessURL: stripe.String("https://google.com/success"),
 		CancelURL:  stripe.String("https://google.com/cancel"),
@@ -124,6 +128,26 @@ func createPaymentSessionData(lineItems []*stripe.CheckoutSessionCreateLineItemP
 		Metadata: map[string]string{
 			"order_id": "1234",
 		},
+	}
+
+	if discount > 0 {
+		couponParams := &stripe.CouponCreateParams{
+			Name:      new("Sold Items"),
+			AmountOff: new(discount),
+			Currency:  stripe.String(string(stripe.CurrencyUSD)),
+			Duration:  stripe.String(string(stripe.CouponDurationOnce)),
+		}
+
+		c, err := sc.V1Coupons.Create(context.TODO(), couponParams)
+		if err != nil {
+			return nil, err
+		}
+
+		params.Discounts = []*stripe.CheckoutSessionCreateDiscountParams{
+			{
+				Coupon: stripe.String(c.ID),
+			},
+		}
 	}
 
 	return sc.V1CheckoutSessions.Create(context.TODO(), params)
