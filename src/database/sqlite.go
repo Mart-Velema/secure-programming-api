@@ -30,7 +30,7 @@ type User struct {
 	SteamId      uint64         `json:"steamId"`
 	TradeUrl     string         `json:"tradeUrl" encrypt:"true"`
 	TotpSecret   string         `encrypt:"true"`
-	RecoveryCode string         `hash:"true"`
+	RecoveryCode string         `hash:"RecoveryCode"`
 	Trades       []Trade        `gorm:"foreignKey:UserID"`
 	Token        []RefreshToken `gorm:"foreignKey:UserID"`
 }

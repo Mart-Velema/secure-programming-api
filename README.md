@@ -15,7 +15,7 @@ To start working on the API, you must first install the Go language from [go.dev
 Installing `Go 1.26.4`.
 ```shell
 cd
-winget https://go.dev/dl/go1.26.4.linux-amd64.tar.gz
+wget https://go.dev/dl/go1.26.4.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go1.26.4.linux-amd64.tar.gz
 echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.bashrc
 source $HOME/.profile
