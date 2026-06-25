@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/stripe/stripe-go/v85"
 	"guineatrade.nhlstenden.com/src/backpack"
+	"guineatrade.nhlstenden.com/src/database"
 	"guineatrade.nhlstenden.com/src/inventory"
 	"guineatrade.nhlstenden.com/src/items"
 	"guineatrade.nhlstenden.com/src/steam"
@@ -39,6 +40,26 @@ type CheckoutItem struct {
 	IsSold       bool // Whether the item is bought or sold by the user
 }
 
+func (c CheckoutItem) Name() string {
+	return c.Items[0].MarketHashName
+}
+
+func (c CheckoutItem) Description() string {
+	item := c.Items[0]
+	craftable := ""
+	if item.Craftable == true {
+		craftable = "Craftable"
+	} else {
+		craftable = "Uncraftable"
+	}
+
+	return fmt.Sprintf("%s - %s", craftable, item.Quality)
+}
+
+func (c CheckoutItem) Price() uint {
+	return uint(len(c.Items)) * c.PricePerItem
+}
+
 type CheckoutRequest struct {
 	MarketHashName string           `json:"marketHashName"`
 	Craftable      bool             `json:"craftability"`
@@ -66,6 +87,53 @@ func (cr CheckoutRequest) ToCheckout() Checkout {
 		},
 		isSold: cr.IsSold,
 	}
+}
+
+func toAssets(checkoutItems []CheckoutItem) []database.Asset {
+	var assets []database.Asset
+	for _, checkoutItem := range checkoutItems {
+		for _, item := range checkoutItem.Items {
+			var asset = database.Asset{
+				AssetId: item.AssetId,
+			}
+
+			if checkoutItem.IsSold {
+				asset.TradeDirection = database.SELL
+			} else {
+				asset.TradeDirection = database.BUY
+			}
+			assets = append(assets, asset)
+		}
+	}
+	return assets
+}
+
+func sortAssetsToTradeOfferItems(assets []database.Asset) ([]steam.TradeOfferItem, []steam.TradeOfferItem) {
+	var sellItems []database.Asset
+	var buyItems []database.Asset
+
+	for _, item := range assets {
+		if item.TradeDirection == database.SELL {
+			sellItems = append(sellItems, item)
+		} else {
+			buyItems = append(buyItems, item)
+		}
+	}
+
+	return toTradeOfferItems(sellItems), toTradeOfferItems(buyItems)
+}
+
+func toTradeOfferItems(itemAssets []database.Asset) []steam.TradeOfferItem {
+	var tradeOfferItems []steam.TradeOfferItem
+	for _, asset := range itemAssets {
+		tradeOfferItems = append(tradeOfferItems, steam.TradeOfferItem{
+			AppID:     440,
+			ContextID: "2",
+			AssetID:   asset.AssetId,
+		})
+	}
+
+	return tradeOfferItems
 }
 
 func toCheckoutItems(steamId uint64, stockList []CheckoutRequest) ([]CheckoutItem, error) {
@@ -111,24 +179,4 @@ func toCheckoutItems(steamId uint64, stockList []CheckoutRequest) ([]CheckoutIte
 	}
 
 	return result, nil
-}
-
-func (c CheckoutItem) Name() string {
-	return c.Items[0].MarketHashName
-}
-
-func (c CheckoutItem) Description() string {
-	item := c.Items[0]
-	craftable := ""
-	if item.Craftable == true {
-		craftable = "Craftable"
-	} else {
-		craftable = "Uncraftable"
-	}
-
-	return fmt.Sprintf("%s - %s", craftable, item.Quality)
-}
-
-func (c CheckoutItem) Price() uint {
-	return uint(len(c.Items)) * c.PricePerItem
 }

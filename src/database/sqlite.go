@@ -66,19 +66,39 @@ type RefreshToken struct {
 }
 
 type Trade struct {
-	gorm.Model  `json:"-"`
-	UserID      uint
-	Cost        int64
-	SoldItems   []TradeItem `gorm:"foreignKey:TradeID"`
-	BoughtItems []TradeItem `gorm:"foreignKey:TradeID"`
+	gorm.Model   `json:"-"`
+	UserID       uint
+	Cost         int64
+	TradeAction  TradeAction
+	TradeStatus  TradeStatus
+	SteamTradeId string
+	Assets       []Asset
 }
 
-type TradeItem struct {
-	gorm.Model `json:"-"`
-	TradeID    uint
-	ItemID     uint
-	Quantity   uint
+type Asset struct {
+	gorm.Model     `json:"-"`
+	TradeID        uint
+	Trade          Trade
+	TradeDirection TradeAction
+	AssetId        string
 }
+
+type TradeAction int
+
+const (
+	BUY TradeAction = iota
+	SELL
+)
+
+type TradeStatus int
+
+const (
+	PAYMENT_IN_PROGRESS TradeStatus = iota
+	TRADE_IN_PROGRESS
+	TRADE_COMPLETED
+	COMPLETED
+	CANCELLED
+)
 
 func createEncryptor() {
 	if instanceEncryptor != nil {
@@ -119,7 +139,7 @@ func createDB() {
 		log.Fatal(err)
 	}
 
-	err = db.AutoMigrate(&User{}, &Trade{}, &TradeItem{}, &RefreshToken{})
+	err = db.AutoMigrate(&User{}, &Trade{}, &Asset{}, &RefreshToken{})
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/stripe/stripe-go/v85"
+	"guineatrade.nhlstenden.com/src/database"
 )
 
 var (
@@ -33,28 +34,65 @@ func init() {
 func Webhook(c *gin.Context) {
 	payload, err := io.ReadAll(c.Request.Body)
 	if err != nil {
+		log.Println("Error reading payload:", err)
 		c.String(400, "Invalid Payload")
-		log.Printf("Error reading payload: %s\n", err)
 		return
 	}
 
 	evt, err := sc.ConstructEvent(payload, c.GetHeader("Stripe-Signature"), whSec)
 	if err != nil {
+		log.Println("Error verifying webhook signature:", err)
 		c.String(400, "Webhook signature verification failed")
-		log.Printf("Error verifying webhook signature: %s\n\n", err)
 		return
 	}
 
 	switch evt.Type {
 	case "checkout.session.completed":
-		var checkoutComplete stripe.CheckoutSession
-		err := json.Unmarshal(evt.Data.Raw, &checkoutComplete)
+		var checkoutSession stripe.CheckoutSession
+		err := json.Unmarshal(evt.Data.Raw, &checkoutSession)
 		if err != nil {
 			log.Printf("Error unmarshalling checkout session: %s\n", err)
 			return
 		}
 
-		c.String(200, checkoutComplete.Metadata["order-id"])
-		log.Println(checkoutComplete.Metadata["order-id"])
+		var trade database.Trade
+
+		if result := database.GetInstance().
+			Preload("Assets").
+			Where("id = ?", checkoutSession.Metadata["transaction_id"]).
+			First(&trade); result.Error != nil {
+			log.Println("Error getting trade:", err)
+			c.String(400, "Error getting trade")
+			return
+		}
+
+		var user database.User
+		err = database.GetInstance().
+			Where("id = ?", trade.UserID).
+			First(&user).
+			Error
+
+		if err != nil {
+			log.Printf("Error getting trade user: %s\n", err)
+			c.String(400, "Error getting trade")
+			return
+		}
+
+		sellItems, buyItems := sortAssetsToTradeOfferItems(trade.Assets)
+
+		res, err := sendTradeOffer(user, sellItems, buyItems)
+
+		if err != nil {
+			log.Println("Error sending trade offer:", err)
+			c.String(400, "Error getting trade")
+			return
+		}
+
+		trade.TradeStatus = database.TRADE_IN_PROGRESS
+		trade.SteamTradeId = res.TradeOfferID
+
+		database.GetInstance().Save(&trade)
+
+		c.String(200, checkoutSession.Metadata["transaction-id"])
 	}
 }
