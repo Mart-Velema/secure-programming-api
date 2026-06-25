@@ -114,8 +114,9 @@ func TestResetTOTP(t *testing.T) {
 	}
 
 	for _, t2 := range tests {
+		recoveryCode := rand.Text()
 		user.TotpSecret = rand.Text()
-		user.RecoveryCode = rand.Text()
+		user.RecoveryCode = recoveryCode
 
 		database.GetInstance().Select("recovery_code", "totp_secret").Save(user)
 		database.GetInstance().First(user)
@@ -124,7 +125,7 @@ func TestResetTOTP(t *testing.T) {
 		if t2.IsTOTPCode {
 			code, _ = totp.GenerateCode(user.TotpSecret, time.Now())
 		} else {
-			code = user.RecoveryCode
+			code = recoveryCode
 		}
 		if t2.BadKey {
 			code = "abcdef"
