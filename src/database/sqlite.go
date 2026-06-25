@@ -16,10 +16,8 @@ import (
 )
 
 var (
-	lockSqlite        = &sync.Mutex{}
-	lockEncryptor     = &sync.Mutex{}
-	instanceDB        *gorm.DB
-	instanceEncryptor *encryption.Encryptor
+	lockSqlite = &sync.Mutex{}
+	instanceDB *gorm.DB
 )
 
 type User struct {
@@ -83,28 +81,13 @@ type TradeItem struct {
 	Quantity   uint
 }
 
-func createEncryptor() {
-	if instanceEncryptor != nil {
-		return
-	}
-
+func createEncryptor() *encryption.Encryptor {
 	encryptor, err := encryption.NewEncryptorFromConfig(encryption.DefaultConfig())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	instanceEncryptor = encryptor
-}
-
-func GetEncryptor() *encryption.Encryptor {
-	if instanceEncryptor != nil {
-		return instanceEncryptor
-	}
-	lockEncryptor.Lock()
-	defer lockEncryptor.Unlock()
-	createEncryptor()
-
-	return instanceEncryptor
+	return encryptor
 }
 
 func createDB() {
@@ -116,7 +99,7 @@ func createDB() {
 		log.Fatal(err)
 	}
 
-	encryptor := GetEncryptor()
+	encryptor := createEncryptor()
 	err = db.Use(encryption.NewPlugin(encryptor))
 	if err != nil {
 		log.Fatal(err)
