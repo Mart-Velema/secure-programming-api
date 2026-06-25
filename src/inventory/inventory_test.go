@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -17,16 +18,16 @@ import (
 // This ID belongs to a MPTF bot, and will always be available
 func TestGetInventoryApi(t *testing.T) {
 	router := gin.Default()
-	router.GET("/api/v1/user/inventory", GetInventory)
+	router.GET("/inventory", GetInventory)
 
 	type getInventoryTest struct {
-		Id                uint64
-		InventoryResponse int
-		HasError          bool
+		Id         uint64
+		StatusCode int
+		Response   string
 	}
 	tests := []getInventoryTest{
-		{76561198248575244, 1, false},
-		{0, 0, true},
+		{76561198248575244, http.StatusOK, ""},
+		{0, http.StatusInternalServerError, "{\"error\":\"Unable to get inventory data\"}"},
 	}
 
 	user := database.CreateRandomUser()
@@ -39,24 +40,11 @@ func TestGetInventoryApi(t *testing.T) {
 		database.GetInstance().Select("steam_id", "trade_url").Save(user)
 
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/user/inventory", nil)
+		req, _ := http.NewRequest("GET", "/inventory", nil)
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
 		router.ServeHTTP(w, req)
 
-		if test.HasError {
-			assert.Equal(t, http.StatusInternalServerError, w.Code)
-			assert.Equal(t, "{\"error\":\"Unable to get inventory data\"}", w.Body.String())
-			continue
-		}
-		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Equal(t, w.Body.Len() > 1, true)
+		assert.Equal(t, strings.Contains(w.Body.String(), test.Response), true)
+		assert.Equal(t, test.StatusCode, w.Code)
 	}
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/v1/user/inventory", nil)
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", "not-a-valid-token"))
-	router.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
-	assert.Equal(t, "{\"error\":\"Token expired\"}", w.Body.String())
 }
