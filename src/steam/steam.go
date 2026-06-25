@@ -11,6 +11,9 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+	"guineatrade.nhlstenden.com/src/auth/middleware"
+	"guineatrade.nhlstenden.com/src/database"
 	"guineatrade.nhlstenden.com/src/items"
 )
 
@@ -105,18 +108,77 @@ func GetTradeOfferHistory(c *gin.Context) {
 	}
 }
 
-func GetTradeOffer(c *gin.Context) {
-	tradeOfferId := c.Param("tradeOfferId")
-
+func getTradeOffer(tradeOfferId string) (*TradeOfferResponse, error) {
 	path := fmt.Sprintf(
 		"/steam/trade-offers/%s",
 		tradeOfferId,
 	)
 
-	_, err := steamBotRequest(http.MethodGet, path, nil)
+	result, err := steamBotRequest(http.MethodGet, path, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get requested trade offer"})
+		log.Println("Error getting trade offer:", err)
+		return nil, err
+	}
+
+	var response TradeOfferResponse
+	if err = json.Unmarshal(*result, &response); err != nil {
+		return nil, err
+	}
+
+	if !response.OK {
+		return nil, errors.New("unable to process trade offer request")
+	}
+
+	return &response, nil
+}
+
+func GetTradeStatus(c *gin.Context) {
+	user, err := middleware.ExtractTokenUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
 		return
+	}
+
+	var trade database.Trade
+
+	err = database.GetInstance().
+		Where("user_id = ?", user.ID).
+		Where("trade_status NOT IN ?", []int{2, 3}).
+		First(&trade).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusOK, gin.H{"status": -1})
+			return
+		}
+		log.Println("Error getting trades:", err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Unable to get trade status"})
+		return
+	}
+
+	if trade.TradeStatus == database.PAYMENT_IN_PROGRESS {
+		c.JSON(http.StatusOK, gin.H{"status": database.PAYMENT_IN_PROGRESS, "data": trade.StripePaymentUrl})
+		return
+	}
+
+	if trade.TradeStatus == database.TRADE_IN_PROGRESS {
+		offer, err := getTradeOffer(trade.SteamTradeId)
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Unable to get trade offer"})
+			log.Println("Error getting trade offer:", err)
+			return
+		}
+
+		// 3 = Status Accepted
+		if offer.Offer.State == 3 {
+			trade.TradeStatus = database.COMPLETED
+			database.GetInstance().Save(&trade)
+
+			c.JSON(http.StatusOK, gin.H{"status": database.COMPLETED, "data": ""})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"status": database.TRADE_IN_PROGRESS, "data": trade.SteamTradeId})
 	}
 }
 

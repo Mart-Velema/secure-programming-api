@@ -78,6 +78,7 @@ func main() {
 		{
 			userGroup.GET("/inventory", inventory.GetInventory)
 			userGroup.GET("/stock", inventory.GetUserStock)
+			userGroup.GET("/trade/status", steam.GetTradeStatus)
 		}
 		stripeGroup := apiRestricted.Group("/stripe")
 		{

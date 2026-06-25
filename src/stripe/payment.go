@@ -85,6 +85,9 @@ func CreatePaymentSession(c *gin.Context) {
 			return
 		}
 
+		trade.StripePaymentUrl = session.URL
+		database.GetInstance().Save(&trade)
+
 		c.JSON(http.StatusOK, gin.H{"status": "created_link", "url": session.URL})
 	} else {
 		res, err := sendCheckoutTradeOffer(user, checkoutItems)

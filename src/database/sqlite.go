@@ -66,13 +66,14 @@ type RefreshToken struct {
 }
 
 type Trade struct {
-	gorm.Model   `json:"-"`
-	UserID       uint
-	Cost         int64
-	TradeAction  TradeAction
-	TradeStatus  TradeStatus
-	SteamTradeId string
-	Assets       []Asset
+	gorm.Model       `json:"-"`
+	UserID           uint
+	Cost             int64
+	TradeAction      TradeAction
+	TradeStatus      TradeStatus
+	SteamTradeId     string
+	StripePaymentUrl string
+	Assets           []Asset
 }
 
 type Asset struct {
@@ -95,7 +96,6 @@ type TradeStatus int
 const (
 	PAYMENT_IN_PROGRESS TradeStatus = iota
 	TRADE_IN_PROGRESS
-	TRADE_COMPLETED
 	COMPLETED
 	CANCELLED
 )
