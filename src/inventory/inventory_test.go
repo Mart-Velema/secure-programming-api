@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/assert/v2"
 	_ "guineatrade.nhlstenden.com/src/1nit"
-	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/database"
 )
 
@@ -32,7 +31,6 @@ func TestGetInventoryApi(t *testing.T) {
 
 	user := database.CreateRandomUser()
 	database.GetInstance().First(user)
-	jwt, _ := middleware.GenerateToken(user)
 
 	for _, test := range tests {
 		user.SteamId = test.Id
@@ -41,7 +39,6 @@ func TestGetInventoryApi(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/inventory", nil)
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, strings.Contains(w.Body.String(), test.Response), true)
