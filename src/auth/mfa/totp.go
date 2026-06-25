@@ -10,6 +10,7 @@ import (
 	"github.com/pquerna/otp/totp"
 	"guineatrade.nhlstenden.com/src/auth/middleware"
 	"guineatrade.nhlstenden.com/src/database"
+	"github.com/cgholdings/go-common/database/encryption"
 )
 
 type TotpCodes struct {
@@ -87,7 +88,7 @@ func ResetTOTP(c *gin.Context) {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "No recovery or TOTP code supplied"})
 			return
 		}
-		if recoveryCode != user.RecoveryCode {
+		if encryption.Hash(recoveryCode) != user.RecoveryCode {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid recovery code"})
 			return
 		}
