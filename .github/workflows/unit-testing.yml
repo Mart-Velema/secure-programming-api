@@ -85,7 +85,7 @@ jobs:
           # Backpack.tf
           BACKPACK_API_KEY="12345678901234567890abcd"
           BACKPACK_API_HASH="sha256:39a999a6d0aad5c4be9ea3c952dd6331d6c14ff2b2c0f1e1e99fb11e8653e78f"
-          ITEM_CONSTANTS="${{ github.workspace }}/.env"
+          ITEM_CONSTANTS="${{ github.workspace }}/item-constants.json"
 
           # Steam Bot
           BOT_PORT="3001"
@@ -98,7 +98,7 @@ jobs:
           STEAM_IDENTITY_SECRET=""
           EOF
       - name: Run tests
-        run: go test ./... -race
+        run: ENV_FILE="${{ github.workspace }}/.env" go test ./... -race
       - name: Vet files
         run: go vet ./...
       - name: Static code analysis
