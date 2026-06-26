@@ -23,6 +23,7 @@ var (
 	apiKey        string
 	PricingCache  PricingDataCache
 	itemCache     map[string]itemConstants
+	unusualCache  map[string]string
 	defindexCache map[string]uint32
 )
 
@@ -207,7 +208,24 @@ func installItemCache() {
 		log.Fatal(err)
 	}
 
+	cacheFile, found = os.LookupEnv("UNUSUAL_CONSTANTS")
+	if !found {
+		log.Fatalf("UNUSUAL_CONSTANTS is undefined")
+	}
+
+	content, err = os.ReadFile(cacheFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var unusuals = make(map[string]string)
+	err = json.Unmarshal(content, &unusuals)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	itemCache = items
+	unusualCache = unusuals
 	defindexCache = make(map[string]uint32)
 
 	for s, constants := range items {

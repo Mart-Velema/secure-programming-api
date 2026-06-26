@@ -1,15 +1,19 @@
 package steam
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"bytes"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+	"guineatrade.nhlstenden.com/src/auth/middleware"
+	"guineatrade.nhlstenden.com/src/database"
 	"guineatrade.nhlstenden.com/src/items"
 )
 
@@ -58,6 +62,15 @@ func GetBotStatus(c *gin.Context) {
 }
 
 func GetBotInventory(c *gin.Context) {
+	result, err := GetBotInventoryData()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get inventory data"})
+		return
+	}
+	c.JSON(http.StatusOK, result.Assets)
+}
+
+func GetBotInventoryData() (items.Items, error) {
 	const appId = 440
 	const contextId = 2
 
@@ -69,16 +82,14 @@ func GetBotInventory(c *gin.Context) {
 
 	result, err := steamBotRequest(http.MethodGet, path, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get Steam Inventory"})
-		return
+		return items.Items{}, err
 	}
 	var inventory items.SteamInventoryResponse
 	err = json.Unmarshal(*result, &inventory)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to process Steam Inventory"})
-		return
+		return items.Items{}, err
 	}
-	c.JSON(http.StatusOK, inventory.ToItems().Assets)
+	return inventory.ToItems(), nil
 }
 
 func GetTradeOffers(c *gin.Context) {
@@ -97,80 +108,140 @@ func GetTradeOfferHistory(c *gin.Context) {
 	}
 }
 
-func GetTradeOffer(c *gin.Context) {
-	tradeOfferId := c.Param("tradeOfferId")
-
+func getTradeOffer(tradeOfferId string) (*TradeOfferResponse, error) {
 	path := fmt.Sprintf(
 		"/steam/trade-offers/%s",
 		tradeOfferId,
 	)
 
-	_, err := steamBotRequest(http.MethodGet, path, nil)
+	result, err := steamBotRequest(http.MethodGet, path, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to get requested trade offer"})
-		return
-	}
-}
-
-func SendTradeOffer(c *gin.Context) {
-	var request SendTradeOfferRequest
-
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid trade offer request",
-		})
-		return
+		log.Println("Error getting trade offer:", err)
+		return nil, err
 	}
 
-	if request.TradeURL == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "tradeUrl is required",
-		})
-		return
-	}
-
-	if len(request.ItemsToGive) == 0 && len(request.ItemsToReceive) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "trade offer must contain at least one item",
-		})
-		return
-	}
-
-	body, err := json.Marshal(request)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "unable to process trade offer request",
-		})
-		return
-	}
-
-	result, err := steamBotRequest(
-		http.MethodPost,
-		"/steam/trade-offers",
-		bytes.NewReader(body),
-	)
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Unable to send trade offer",
-		})
-		return
-	}
-
-	var response SendTradeOfferResponse
-	if err := json.Unmarshal(*result, &response); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Unable to process trade offer response",
-		})
-		return
+	var response TradeOfferResponse
+	if err = json.Unmarshal(*result, &response); err != nil {
+		return nil, err
 	}
 
 	if !response.OK {
-		c.JSON(http.StatusBadGateway, response)
+		return nil, errors.New("unable to process trade offer request")
+	}
+
+	return &response, nil
+}
+
+func GetTradeStatus(c *gin.Context) {
+	user, err := middleware.ExtractTokenUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Token expired"})
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	var trade database.Trade
+
+	err = database.GetInstance().
+		Where("user_id = ?", user.ID).
+		Where("trade_status NOT IN ?", []int{2, 3}).
+		First(&trade).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusOK, gin.H{"status": -1, "data": ""})
+			return
+		}
+		log.Println("Error getting trades:", err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Unable to get trade status"})
+		return
+	}
+
+	if trade.TradeStatus == database.PAYMENT_IN_PROGRESS {
+		c.JSON(http.StatusOK, gin.H{"status": database.PAYMENT_IN_PROGRESS, "data": trade.StripePaymentUrl})
+		return
+	}
+
+	if trade.TradeStatus == database.TRADE_IN_PROGRESS {
+		offer, err := getTradeOffer(trade.SteamTradeId)
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Unable to get trade offer"})
+			log.Println("Error getting trade offer:", err)
+			return
+		}
+
+		state := offer.Offer.State
+
+		canceledStates := map[int]bool{
+			4:  true, // Countered
+			5:  true, // Expired
+			6:  true, // Canceled
+			7:  true, // Declined
+			10: true, // CanceledBySecondFactor
+		}
+
+		if canceledStates[state] {
+			trade.TradeStatus = database.CANCELLED
+			database.GetInstance().Save(&trade)
+
+			if trade.TradeAction == database.BUY {
+				user.Balance += trade.Cost
+				database.GetInstance().Save(&user)
+			}
+
+			c.JSON(http.StatusOK, gin.H{"status": database.CANCELLED, "data": ""})
+			return
+		}
+
+		// Accepted
+		if state == 3 {
+			trade.TradeStatus = database.COMPLETED
+			database.GetInstance().Save(&trade)
+
+			if trade.TradeAction == database.SELL {
+				user.Balance -= trade.Cost
+				database.GetInstance().Save(&user)
+			}
+
+			c.JSON(http.StatusOK, gin.H{"status": database.COMPLETED, "data": ""})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"status": database.TRADE_IN_PROGRESS, "data": trade.SteamTradeId})
+		return
+	}
+
+	c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Unable to get trade status"})
+}
+
+func SendTradeOffer(tradeOfferRequest SendTradeOfferRequest) (*SendTradeOfferResponse, error) {
+	if tradeOfferRequest.TradeURL == "" {
+		return nil, errors.New("tradeUrl is required")
+	}
+
+	if len(tradeOfferRequest.ItemsToGive) == 0 && len(tradeOfferRequest.ItemsToReceive) == 0 {
+		return nil, errors.New("trade offer must contain at least one item")
+	}
+
+	body, err := json.Marshal(tradeOfferRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := steamBotRequest(http.MethodPost, "/steam/trade-offers", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	var response SendTradeOfferResponse
+	if err = json.Unmarshal(*result, &response); err != nil {
+		return nil, err
+	}
+
+	if !response.OK {
+		return nil, errors.New("unable to process trade offer request")
+	}
+
+	return &response, nil
 }
 
 func AcceptTradeOffer(c *gin.Context) {

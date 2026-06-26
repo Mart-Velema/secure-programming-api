@@ -32,13 +32,15 @@ func (r *InventoryResponse) ToItem() Items {
 		marketHashName := backpack.GetMarketHashName(defindex)
 
 		item := Item{
-			AssetId:        asset.AssetId,
-			InstanceId:     asset.InstanceId,
-			ClassId:        asset.ClassId,
-			MarketHashName: marketHashName,
-			Defindex:       defindex,
-			Craftable:      description.getCraftability(),
-			Quality:        description.getType(),
+			AssetId:    asset.AssetId,
+			InstanceId: asset.InstanceId,
+			ClassId:    asset.ClassId,
+			Defindex:   defindex,
+			ItemType: ItemType{
+				MarketHashName: marketHashName,
+				Craftable:      description.getCraftability(),
+				Quality:        description.getType(),
+			},
 		}
 
 		effect, hasEffect := description.getUnusual()

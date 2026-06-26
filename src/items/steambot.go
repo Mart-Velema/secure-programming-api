@@ -23,13 +23,15 @@ func (s *SteamInventoryResponse) ToItems() Items {
 		marketHashName := backpack.GetMarketHashName(defindex)
 
 		item := Item{
-			AssetId:        asset.AssetId,
-			InstanceId:     asset.InstanceId,
-			ClassId:        asset.ClassId,
-			MarketHashName: marketHashName,
-			Defindex:       defindex,
-			Craftable:      asset.getCraftability(),
-			Quality:        asset.getType(),
+			AssetId:    asset.AssetId,
+			InstanceId: asset.InstanceId,
+			ClassId:    asset.ClassId,
+			Defindex:   defindex,
+			ItemType: ItemType{
+				MarketHashName: marketHashName,
+				Craftable:      asset.getCraftability(),
+				Quality:        asset.getType(),
+			},
 		}
 
 		effect, hasEffect := asset.getUnusual()

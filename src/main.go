@@ -14,6 +14,7 @@ import (
 	"guineatrade.nhlstenden.com/src/database"
 	"guineatrade.nhlstenden.com/src/inventory"
 	"guineatrade.nhlstenden.com/src/steam"
+	"guineatrade.nhlstenden.com/src/stripe"
 )
 
 func HelloWorld(c *gin.Context) {
@@ -29,11 +30,16 @@ func init() {
 func CreateRouter() *gin.Engine {
 	router := gin.Default()
 
-	apiPublic := router.Group("/api/v1/auth")
+	apiPublic := router.Group("/api/v1")
 	{
-		apiPublic.POST("/register", auth.Register)
-		apiPublic.POST("/login", auth.Login)
-		apiPublic.POST("/refresh", auth.Refresh)
+		authGroup := apiPublic.Group("/auth")
+		{
+			authGroup.POST("/register", auth.Register)
+			authGroup.POST("/login", auth.Login)
+			authGroup.POST("/refresh", auth.Refresh)
+		}
+
+		apiPublic.POST("/stripe/webhook", stripe.Webhook)
 	}
 
 	apiRestricted := router.Group("/api/v1")
@@ -59,11 +65,18 @@ func CreateRouter() *gin.Engine {
 		steamGroup := apiRestricted.Group("/steam")
 		{
 			steamGroup.GET("/inventory", steam.GetBotInventory)
+			steamGroup.GET("/stock", inventory.GetSteamBotStock)
 		}
 
 		userGroup := apiRestricted.Group("/user")
 		{
 			userGroup.GET("/inventory", inventory.GetInventory)
+			userGroup.GET("/stock", inventory.GetUserStock)
+			userGroup.GET("/trade/status", steam.GetTradeStatus)
+		}
+		stripeGroup := apiRestricted.Group("/stripe")
+		{
+			stripeGroup.POST("/create", stripe.CreatePaymentSession)
 		}
 	}
 
