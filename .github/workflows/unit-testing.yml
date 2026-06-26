@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup .env
         run: |
-          cat << 'EOF' > "${{ github.workspace }}.env"
+          cat << 'EOF' > .env
           # All credentials in this file are merely the bare minimum to get the project running
           # DO NOT use these credentials for a live server UNDER ANY CIRCUMSTANCES
           # ALWAY generate new credentials instead of reusing these
@@ -81,7 +81,7 @@ jobs:
           cache: false
       - name: Setup .env
         run: |
-          cat << 'EOF' > "${{ github.workspace }}.env"
+          cat << 'EOF' > .env
           # All credentials in this file are merely the bare minimum to get the project running
           # DO NOT use these credentials for a live server UNDER ANY CIRCUMSTANCES
           # ALWAY generate new credentials instead of reusing these
