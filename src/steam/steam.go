@@ -148,7 +148,7 @@ func GetTradeStatus(c *gin.Context) {
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusOK, gin.H{"status": -1})
+			c.JSON(http.StatusOK, gin.H{"status": -1, "data": ""})
 			return
 		}
 		log.Println("Error getting trades:", err)
@@ -172,10 +172,11 @@ func GetTradeStatus(c *gin.Context) {
 		state := offer.Offer.State
 
 		canceledStates := map[int]bool{
-			4: true, // Countered
-			5: true, // Expired
-			6: true, // Canceled
-			7: true, // Declined
+			4:  true, // Countered
+			5:  true, // Expired
+			6:  true, // Canceled
+			7:  true, // Declined
+			10: true, // CanceledBySecondFactor
 		}
 
 		if canceledStates[state] {
