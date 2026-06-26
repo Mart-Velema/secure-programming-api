@@ -145,6 +145,11 @@ Successful login returns:
 ```
 
 
+### Stripe
+
+Stripe is used to handle payments in the application, a default test platform is used.
+You can create one of these at [Stripe's webpage](https://stripe.com).  To receive payment confirmations you need to set up a webhook for the `checkout.session.completed` event, the secret key for this can be stored in the `.env` at `STRIPE_WH_SECRET_KEY`
+
 ### Database
 
 The database is a generic SQLite3 database. it is managed by [GORM](https://gorm.io/docs/), which automatically adds in the required columns and constraints, sets-up encryption for the fields that require it and manage the relations between the tables.
@@ -153,10 +158,6 @@ To assess the database instance in the code, you can use the database singleton:
 ```go
 db := database.getInstance()
 ```
-
-The database can also be seeded with random values. You can enable seeding by passing `--seed` as a CLI argument
-
-_note_: Seeding the database permanently and destructively deletes the entire database. Really, it literally deletes the file permanently.
 
 ### Middlewares
 

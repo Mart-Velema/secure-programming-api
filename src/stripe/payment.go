@@ -90,7 +90,7 @@ func CreatePaymentSession(c *gin.Context) {
 
 		c.JSON(http.StatusOK, gin.H{"status": "created_link", "url": session.URL})
 	} else {
-		res, err := sendCheckoutTradeOffer(user, checkoutItems)
+		res, err := sendCheckoutTradeOffer(*user, checkoutItems)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create trade offer"})

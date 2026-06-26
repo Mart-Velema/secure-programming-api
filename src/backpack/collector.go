@@ -208,13 +208,18 @@ func installItemCache() {
 		log.Fatal(err)
 	}
 
-	unusualConstantsJson, err := os.ReadFile("unusuals.json")
+	cacheFile, found = os.LookupEnv("UNUSUAL_CONSTANTS")
+	if !found {
+		log.Fatalf("UNUSUAL_CONSTANTS is undefined")
+	}
+
+	content, err = os.ReadFile(cacheFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var unusuals = make(map[string]string)
-	err = json.Unmarshal(unusualConstantsJson, &unusuals)
+	err = json.Unmarshal(content, &unusuals)
 	if err != nil {
 		log.Fatal(err)
 	}
