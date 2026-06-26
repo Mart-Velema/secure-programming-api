@@ -198,7 +198,7 @@ func GetTradeStatus(c *gin.Context) {
 			database.GetInstance().Save(&trade)
 
 			if trade.TradeAction == database.SELL {
-				user.Balance += trade.Cost
+				user.Balance -= trade.Cost
 				database.GetInstance().Save(&user)
 			}
 
