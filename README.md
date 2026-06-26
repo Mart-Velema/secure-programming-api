@@ -15,7 +15,7 @@ To start working on the API, you must first install the Go language from [go.dev
 Installing `Go 1.26.4`.
 ```shell
 cd
-winget https://go.dev/dl/go1.26.4.linux-amd64.tar.gz
+wget https://go.dev/dl/go1.26.4.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go1.26.4.linux-amd64.tar.gz
 echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.bashrc
 source $HOME/.profile
@@ -48,7 +48,7 @@ _note_: Make sure you've also configured the `.env` file before you run the API,
 
 To run the API, use:
 ```shell
-CGO_ENABLED=1 go run guineatrade.nhlstenden.com/src
+CGO_ENABLED=1  ENV_FILE="/path/to/env/.env" go run guineatrade.nhlstenden.com/src
 ```
 
 <hr>
@@ -72,6 +72,7 @@ JWT_REFRESH_DAYS=7 # Time the refresh token is valid in days
 # Backpack.tf
 BACKPACK_API_KEY="12345678901234567890abcd" # The Backpack.TF API key
 BACKPACK_API_HASH="sha256:39a999a6d0aad5c4be9ea3c952dd6331d6c14ff2b2c0f1e1e99fb11e8653e78f" # The backpack.tf API hash
+ITEM_CONSTANTS="/path/to/item-constants.json" # The absolute filepath to the item-constants.json
 
 # Steam API
 STEAM_API_HASH="sha256:STEAM_API_HASH_HERE" # The Steam API hash
@@ -85,11 +86,18 @@ STEAM_USERNAME=guineatradebot # Steam account username
 STEAM_PASSWORD= # Steam account password
 STEAM_SHARED_SECRET= # Optional. Enables automatic Steam Guard login
 STEAM_IDENTITY_SECRET= # Optional. Enables automatic trade confirmations
+
 ```
 
 API hashes can be generated with the following OpenSSL pipeline:
 ```sh
 openssl s_client -connect backpack.tf:443 -servername backpack.tf | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256
+```
+
+In case that the binary or project is executed in a different directory than the .env file, you can supply the filepath using the `--env` CLI flag:
+
+```
+./gt --env /path/to/.env
 ```
 
 <hr>

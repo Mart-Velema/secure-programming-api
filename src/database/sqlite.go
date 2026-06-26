@@ -1,22 +1,23 @@
 package database
 
 import (
+	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/cgholdings/go-common/database/encryption"
+	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 var (
-	lockSqlite        = &sync.Mutex{}
-	lockEncryptor     = &sync.Mutex{}
-	instanceDB        *gorm.DB
-	instanceEncryptor *encryption.Encryptor
+	lockSqlite = &sync.Mutex{}
+	instanceDB *gorm.DB
 )
 
 type User struct {
@@ -29,7 +30,7 @@ type User struct {
 	SteamId      uint64         `json:"steamId"`
 	TradeUrl     string         `json:"tradeUrl" encrypt:"true"`
 	TotpSecret   string         `encrypt:"true"`
-	RecoveryCode string         `hash:"true"`
+	RecoveryCode string         `hash:"RecoveryCode"`
 	Trades       []Trade        `gorm:"foreignKey:UserID"`
 	Token        []RefreshToken `gorm:"foreignKey:UserID"`
 }
@@ -100,28 +101,13 @@ const (
 	CANCELLED
 )
 
-func createEncryptor() {
-	if instanceEncryptor != nil {
-		return
-	}
-
+func createEncryptor() *encryption.Encryptor {
 	encryptor, err := encryption.NewEncryptorFromConfig(encryption.DefaultConfig())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	instanceEncryptor = encryptor
-}
-
-func GetEncryptor() *encryption.Encryptor {
-	if instanceEncryptor != nil {
-		return instanceEncryptor
-	}
-	lockEncryptor.Lock()
-	defer lockEncryptor.Unlock()
-	createEncryptor()
-
-	return instanceEncryptor
+	return encryptor
 }
 
 func createDB() {
@@ -133,7 +119,7 @@ func createDB() {
 		log.Fatal(err)
 	}
 
-	encryptor := GetEncryptor()
+	encryptor := createEncryptor()
 	err = db.Use(encryption.NewPlugin(encryptor))
 	if err != nil {
 		log.Fatal(err)
@@ -145,6 +131,26 @@ func createDB() {
 	}
 
 	instanceDB = db
+}
+
+func CreateRandomUser() *User {
+	password := uuid.New()
+	mfaCode := rand.Text()
+	email := fmt.Sprintf("%s@%s.com", uuid.New(), uuid.New())
+	name := rand.Text()
+
+	user := User{
+		Email:        email,
+		Name:         name,
+		Password:     password.String(),
+		TotpSecret:   mfaCode,
+		RecoveryCode: mfaCode,
+	}
+
+	GetInstance().Save(&user)
+	GetInstance().First(&user)
+
+	return &user
 }
 
 func GetInstance() *gorm.DB {

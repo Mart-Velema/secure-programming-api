@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
+	_ "guineatrade.nhlstenden.com/src/1nit"
 	"guineatrade.nhlstenden.com/src/auth"
 	"guineatrade.nhlstenden.com/src/auth/mfa"
 	"guineatrade.nhlstenden.com/src/auth/middleware"
@@ -24,16 +24,10 @@ func HelloWorld(c *gin.Context) {
 var Version string
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %s\n", err)
-	}
 	_ = database.GetInstance()
 }
 
-func main() {
-	fmt.Printf("Running locally on localhost:%s\n", os.Getenv("PORT"))
-
+func CreateRouter() *gin.Engine {
 	router := gin.Default()
 
 	apiPublic := router.Group("/api/v1")
@@ -85,6 +79,14 @@ func main() {
 			stripeGroup.POST("/create", stripe.CreatePaymentSession)
 		}
 	}
+
+	return router
+}
+
+func main() {
+	fmt.Printf("Running locally on localhost:%s\n", os.Getenv("PORT"))
+
+	router := CreateRouter()
 
 	err := router.Run(fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT")))
 	if err != nil {
