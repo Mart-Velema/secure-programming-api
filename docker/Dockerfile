@@ -1,13 +1,16 @@
-FROM golang:1.26.2-trixie AS constructor
+FROM golang:1.26.4-trixie AS constructor
 
 WORKDIR /app
-COPY ./src ./
+COPY ./src ./src
 COPY go.mod go.sum ./
-RUN CGO_ENABLED=0 GOOS=linux go build -o /sp
+RUN go mod tidy
+RUN CGO_ENABLED=1 GOOS=linux go build -o /app/gt ./src
 
-FROM golang:1.26.2-trixie AS runtime-stage
+FROM golang:1.26.4-trixie AS runtime-stage
 
 WORKDIR /
-COPY --from=constructor /sp /sp
+COPY --from=constructor /app/gt /gt
 COPY .env /.env
-ENTRYPOINT ["/sp"]
+COPY item-constants.json /item-constants.json
+COPY unusuals.json /unusuals.json
+ENTRYPOINT ["/gt"]

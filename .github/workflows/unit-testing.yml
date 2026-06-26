@@ -1,0 +1,126 @@
+name: Unit-Testing
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/ci-cd
+  pull_request:
+    branches:
+      - dev
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup .env
+        run: |
+          cat << 'EOF' > .env
+          # All credentials in this file are merely the bare minimum to get the project running
+          # DO NOT use these credentials for a live server UNDER ANY CIRCUMSTANCES
+          # ALWAY generate new credentials instead of reusing these
+          PORT="3000"
+
+          # Database
+          ENCRYPTION_KEY="Fy2mcmCCOS6LsLRpkoeJSFCNVaixHN9oLEdoU+6lu2A="
+          SQLite_FILE_LOCATION="./guineatrade.db"
+
+          # JWT
+          JWT_SECRET_KEY="9/OXQazXCLTqEeOBStvxfn8lBg6if6/7CJqmJPVfTFN6l6wDsOCo4tt0Z0CGr2+20uD+COZtGENC34xXTWbhm3vRLzJG/tMJxpRXYmtMOu+0osYfMyINP82ZpHW6meTKmLbK6NoYEti3olr8RGUmTs/+vLoCM9eoC4GM8Sx2Po8="
+          JWT_TIMEOUT_MINUTES=15
+          JWT_REFRESH_DAYS=7
+
+          # Backpack.tf
+          BACKPACK_API_KEY="12345678901234567890abcd"
+          BACKPACK_API_HASH="sha256:39a999a6d0aad5c4be9ea3c952dd6331d6c14ff2b2c0f1e1e99fb11e8653e78f"
+          ITEM_CONSTANTS="${{ github.workspace }}/item-constants.json"
+          UNUSUAL_CONSTANTS="${{ github.workspace }}/unusuals.json"
+          
+          # Steam API
+          STEAM_API_HASH="sha256:STEAM_API_HASH_HERE"
+
+          # Steam Bot
+          BOT_PORT="3001"
+          STEAM_BOT_URL=http://steam-bot:3001
+          BOT_API_KEY=example-key
+
+          STEAM_USERNAME=guineatradebot
+          STEAM_PASSWORD=""
+          STEAM_SHARED_SECRET=""
+          STEAM_IDENTITY_SECRET=""
+          
+          STRIPE_SECRET_KEY="very-secret-key"
+          STRIPE_WH_SECRET_KEY=""
+          EOF
+
+      - name: Build Docker Compose services
+        run: docker compose build
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v6
+      - name: run linter
+        uses: golangci/golangci-lint-action@v9
+        with:
+          skip-cache: true
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v6
+      - name: installing go packages
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.4'
+          cache: false
+      - name: Setup .env
+        run: |
+          cat << 'EOF' > .env
+          # All credentials in this file are merely the bare minimum to get the project running
+          # DO NOT use these credentials for a live server UNDER ANY CIRCUMSTANCES
+          # ALWAY generate new credentials instead of reusing these
+          PORT="3000"
+
+          # Database
+          ENCRYPTION_KEY="Fy2mcmCCOS6LsLRpkoeJSFCNVaixHN9oLEdoU+6lu2A="
+          SQLite_FILE_LOCATION="./guineatrade.db"
+
+          # JWT
+          JWT_SECRET_KEY="9/OXQazXCLTqEeOBStvxfn8lBg6if6/7CJqmJPVfTFN6l6wDsOCo4tt0Z0CGr2+20uD+COZtGENC34xXTWbhm3vRLzJG/tMJxpRXYmtMOu+0osYfMyINP82ZpHW6meTKmLbK6NoYEti3olr8RGUmTs/+vLoCM9eoC4GM8Sx2Po8="
+          JWT_TIMEOUT_MINUTES=15
+          JWT_REFRESH_DAYS=7
+
+          # Backpack.tf
+          BACKPACK_API_KEY="12345678901234567890abcd"
+          BACKPACK_API_HASH="sha256:39a999a6d0aad5c4be9ea3c952dd6331d6c14ff2b2c0f1e1e99fb11e8653e78f"
+          ITEM_CONSTANTS="${{ github.workspace }}/item-constants.json"
+          UNUSUAL_CONSTANTS="${{ github.workspace }}/unusuals.json"
+          
+          # Steam API
+          STEAM_API_HASH="sha256:STEAM_API_HASH_HERE"
+
+          # Steam Bot
+          BOT_PORT="3001"
+          STEAM_BOT_URL=http://steam-bot:3001
+          BOT_API_KEY=example-key
+
+          STEAM_USERNAME=guineatradebot
+          STEAM_PASSWORD=""
+          STEAM_SHARED_SECRET=""
+          STEAM_IDENTITY_SECRET=""
+          
+          STRIPE_SECRET_KEY="very-secret-key"
+          STRIPE_WH_SECRET_KEY=""
+          EOF
+      - name: Run tests
+        run: ENV_FILE="${{ github.workspace }}/.env" go test ./... -race
+      - name: Vet files
+        run: go vet ./...
+      - name: Static code analysis
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest ; govulncheck ./...
