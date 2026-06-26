@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/stripe/stripe-go/v85"
+	_ "guineatrade.nhlstenden.com/src/1nit"
 	"guineatrade.nhlstenden.com/src/backpack"
 	"guineatrade.nhlstenden.com/src/database"
 	"guineatrade.nhlstenden.com/src/inventory"
@@ -20,11 +20,6 @@ var (
 )
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %s\n", err)
-	}
-
 	stripeApiKey, apiKeyExists := os.LookupEnv("STRIPE_SECRET_KEY")
 
 	if !apiKeyExists {
