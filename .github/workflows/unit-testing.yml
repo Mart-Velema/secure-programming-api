@@ -50,6 +50,9 @@ jobs:
           STEAM_PASSWORD=""
           STEAM_SHARED_SECRET=""
           STEAM_IDENTITY_SECRET=""
+          
+          STRIPE_SECRET_KEY="very-secret-key"
+          STRIPE_WH_SECRET_KEY=""
           EOF
 
       - name: Build Docker Compose services
@@ -109,6 +112,9 @@ jobs:
           STEAM_PASSWORD=""
           STEAM_SHARED_SECRET=""
           STEAM_IDENTITY_SECRET=""
+          
+          STRIPE_SECRET_KEY="very-secret-key"
+          STRIPE_WH_SECRET_KEY=""
           EOF
       - name: Run tests
         run: ENV_FILE="${{ github.workspace }}/.env" go test ./... -race
