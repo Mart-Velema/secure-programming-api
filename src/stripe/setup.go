@@ -47,7 +47,7 @@ func (c CheckoutItem) Name() string {
 func (c CheckoutItem) Description() string {
 	item := c.Items[0]
 	craftable := ""
-	if item.Craftable == true {
+	if item.Craftable {
 		craftable = "Craftable"
 	} else {
 		craftable = "Uncraftable"
